@@ -12,3 +12,397 @@ Template: reign-theme
 Domain Path: /languages/
 Tags: one-column, two-columns, right-sidebar, custom-background, custom-menu, featured-images, post-formats, full-width-template, translation-ready, theme-options, threaded-comments, footer-widgets, custom-logo
 */
+
+/*--------------------------------------------------------------
+# Font Setting
+--------------------------------------------------------------*/
+/* Headlines - Helvetica Bold with condensed letter spacing */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.widget-title {
+    font-family: 'Helvetica', sans-serif;
+    font-weight: bold;
+}
+
+/* Subheadlines - Helvetica Regular */
+.subheadline,
+.uo-groups .uo-looks-like-h1,
+.uo-groups .uo-looks-like-h2,
+.uo-groups .uo-looks-like-h3,
+.uo-groups .uo-looks-like-h4,
+.uo-groups .uo-looks-like-h5,
+.uo-groups .uo-looks-like-h6,
+.uo-groups h1,
+.uo-groups h2,
+.uo-groups h3,
+.uo-groups h4,
+.uo-groups h5,
+.uo-groups h6 {
+    font-family: 'Helvetica', sans-serif;
+    font-weight: normal;
+}
+
+/* Taglines & Emphasized Keywords - Times New Roman Italic */
+.tagline,
+.emphasized {
+    font-family: 'Times New Roman', serif;
+    font-style: italic;
+}
+
+/* Body - Arial Regular */
+body {
+    font-family: 'Arial', sans-serif;
+}
+
+/*--------------------------------------------------------------
+# Theme Color Scheme
+--------------------------------------------------------------*/
+/* Text Color */
+.ulg-manage-progress,
+.ulg-manage-progress-course__row .ulg-manage-progress-course__details .ulg-manage-progress-course__right .ulg-manage-progress-course__progress,
+.uo-groups .dataTables_wrapper .dataTables_length,
+.uo-groups .dataTables_wrapper .dataTables_filter,
+.uo-groups .dataTables_wrapper .dataTables_info,
+.uo-groups .dataTables_wrapper .dataTables_processing,
+.uo-groups .dataTables_wrapper .dataTables_paginate {
+    color: var(--reign-site-body-text-color);
+}
+
+/* Section bg color */
+.ulg-manage-progress-box,
+.ulg-manage-progress-course__row .ulg-manage-progress-course__toggle-btn,
+.ulg-manage-progress-lesson__row .ulg-manage-progress-lesson__toggle-btn {
+    background: var(--reign-site-sections-bg-color);
+}
+
+/* Secondary bg color */
+
+
+/* Border color */
+.ulg-manage-progress-course__row,
+.ulg-manage-progress-lesson__row,
+.ulg-manage-progress-box,
+.ulg-manage-progress-course__lessons,
+.ulg-manage-progress-course__quizzes,
+.ulg-manage-progress-course__row .ulg-manage-progress-course__toggle-btn,
+.ulg-manage-progress-lesson__row .ulg-manage-progress-lesson__toggle-btn {
+    border-color: var(--reign-site-border-color);
+}
+
+
+/* Form Elements */
+.uo-groups .uo-select.uo-select button,
+.uo-groups .uo-select.uo-select select {
+    height: 42px;
+    outline: none;
+    vertical-align: middle;
+    color: var(--reign-site-body-text-color);
+    background-color: var(--reign-site-sections-bg-color);
+    border: 1px solid var(--reign-site-border-color);
+    border-radius: var(--reign-global-border-radius);
+    padding: 0 12px;
+    -webkit-appearance: none;
+    background-image: url("./img/svg/arrow-down.svg");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 40px;
+}
+
+.uo-groups .uo-input,
+.uo-groups.uo-groups .dataTables_filter input,
+.uo-groups.uo-groups.uo-quiz-report #uo-quiz-report-table_filter input,
+#group-management-enrolled-leader-datatable_filter input[type=search],
+#group-management-enrolled-users-datatable_filter input[type=search] {
+    background: var(--reign-form-background-color);
+    color: var(--reign-form-text-color);
+    border: 1px solid var(--reign-form-border-color);
+    border-radius: var(--reign-global-form-radius);
+}
+
+.uo-groups .uo-input:focus,
+.uo-groups.uo-groups .dataTables_filter input:focus,
+.uo-groups.uo-groups.uo-quiz-report #uo-quiz-report-table_filter input:focus,
+#group-management-enrolled-leader-datatable_filter input[type=search]:focus,
+#group-management-enrolled-users-datatable_filter input[type=search]:focus {
+    background: var(--reign-form-focus-background-color);
+    color: var(--reign-form-focus-text-color);
+    border: 1px solid var(--reign-form-focus-border-color);
+}
+
+/*--------------------------------------------------------------
+# Modal Style
+--------------------------------------------------------------*/
+.uo-modal {
+    background: var(--reign-site-sections-bg-color);
+    box-shadow: 0 0 10px var(--reign-more-options-box-shadow);
+}
+
+.group-management-modal .uo-row {
+    border-color: var(--reign-site-border-color);
+}
+
+.group-management-modal .uo-row input {
+    background: var(--reign-form-background-color);
+    color: var(--reign-form-text-color);
+    border: 1px solid var(--reign-form-border-color);
+    border-radius: var(--reign-global-form-radius);
+}
+
+.group-management-modal .uo-row input:focus {
+    background: var(--reign-form-focus-background-color);
+    color: var(--reign-form-focus-text-color);
+    border: 1px solid var(--reign-form-focus-border-color);
+}
+
+.group-management-modal .uo-row .uo-row__title {
+    color: var(--reign-site-headings-color);
+}
+
+.group-management-modal .uo-row .uo-row__description {
+    color: var(--reign-site-body-text-color);
+}
+
+/*--------------------------------------------------------------
+# Select2 Style
+--------------------------------------------------------------*/
+.select2-container .select2-selection--single {
+    height: 40px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 38px;
+}
+
+
+/*--------------------------------------------------------------
+# Data Table Style
+--------------------------------------------------------------*/
+table.dataTable thead .sorting,
+table.dataTable thead .sorting_asc,
+table.dataTable thead .sorting_desc,
+table.dataTable thead .sorting_asc_disabled,
+table.dataTable thead .sorting_desc_disabled {
+    background-position: center right 12px;
+}
+
+.uo-groups table.uo-table-datatable.dataTable tbody tr:hover,
+.uo-groups table.uo-table-datatable.dataTable tbody tr:nth-child(2n),
+.uo-groups table.uo-table-datatable.dataTable tbody tr:nth-child(2n) td,
+.uo-groups table.uo-table-datatable.dataTable tbody tr:nth-child(2n) td:hover,
+.uo-groups table.uo-table-datatable.dataTable tbody tr:nth-child(2n):hover {
+    background: var(--reign-site-sections-bg-color);
+}
+
+table.dataTable>tbody>tr.child ul.dtr-details>li {
+    border-color: var(--reign-site-border-color);
+}
+
+table.uo-table-datatable.dataTable.display tbody tr.even.even>.sorting_1,
+table.uo-table-datatable.dataTable.order-column.stripe tbody tr.even.even>.sorting_1 {
+    background: var(--reign-site-sections-bg-color);
+}
+
+table.dataTable.stripe tbody tr.odd.odd,
+table.dataTable.display tbody tr.odd.odd,
+table.uo-table-datatable.dataTable.display tbody tr.odd.odd>.sorting_1,
+table.uo-table-datatable.dataTable.order-column.stripe tbody tr.odd.odd>.sorting_1 {
+    background: var(--reign-site-secondary-bg-color);
+}
+
+table.dataTable.stripe tbody>tr.odd.odd.selected,
+table.dataTable.stripe tbody>tr.odd.odd>.selected,
+table.dataTable.display tbody>tr.odd.odd.selected,
+table.dataTable.display tbody>tr.odd.odd>.selected {
+    background: rgba(var(--reign-site-secondary-bg-color), 0.1);
+}
+
+table.dataTable.stripe tbody tr.odd.odd.selected,
+table.dataTable.display tbody tr.odd.odd.selected {
+    background: rgba(var(--reign-site-secondary-bg-color), 0.1);
+}
+
+table.dataTable.stripe tbody tr.odd.odd.selected>.sorting_1,
+table.dataTable.display tbody tr.odd.odd.selected>.sorting_1 {
+    background: rgba(var(--reign-site-secondary-bg-color), 0.1);
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+    border-color: var(--reign-colors-theme);
+}
+
+/*--------------------------------------------------------------
+# Group Progress Report
+--------------------------------------------------------------*/
+.uo-groups .uo-btn.uo-btn,
+.uo-groups .uo-groups-actions .uo-btn.uo-btn {
+    background: var(--reign-site-sections-bg-color);
+    color: var(--reign-site-body-text-color);
+    border-color: var(--reign-site-border-color);
+}
+
+.uo-groups .uo-btn.uo-btn:hover,
+.uo-groups .uo-btn.uo-btn:focus {
+    color: var(--reign-colors-theme);
+    border-color: var(--reign-colors-theme);
+}
+
+.ulg-manage-progress-course__row .ulg-manage-progress-course__details .ulg-manage-progress-course__left .ulg-manage-progress-course__progress-actions--need-to-confirm .ulg-manage-progress-course__progress-action-checkbox,
+.ulg-manage-progress-course__row .ulg-manage-progress-course__details .ulg-manage-progress-course__left .ulg-manage-progress-course__progress-actions--need-to-confirm .ulg-manage-progress-course__progress-action-cancel {
+    background: var(--reign-site-sections-bg-color);
+    color: var(--reign-site-headings-color);
+    border-color: var(--reign-site-border-color);
+}
+
+.ulg-manage-progress-course__row .ulg-manage-progress-course__details .ulg-manage-progress-course__left .ulg-manage-progress-course__progress-actions--need-to-confirm .ulg-manage-progress-course__progress-action-checkbox:hover {
+    border-color: var(--reign-color-success) !important;
+    color: var(--reign-color-success);
+}
+
+.ulg-manage-progress-course__row .ulg-manage-progress-course__details .ulg-manage-progress-course__left .ulg-manage-progress-course__progress-actions--need-to-confirm .ulg-manage-progress-course__progress-action-cancel:hover {
+    border-color: var(--reign-color-error);
+    color: var(--reign-color-error);
+}
+
+/*--------------------------------------------------------------
+# Group Essay Report
+--------------------------------------------------------------*/
+.dataTables-filter-columns {
+    background: var(--reign-site-sections-bg-color);
+    border: 1px solid var(--reign-site-border-color);
+    margin: 0 0 10px;
+    padding: 10px;
+    border-radius: var(--reign-global-border-radius);
+}
+
+.dataTables-filter-columns__fields {
+    margin-top: 10px;
+}
+
+.uo-groups .dataTables-filter-columns__toggle label {
+    color: var(--reign-colors-theme);
+}
+
+/*--------------------------------------------------------------
+# Group Assignment Report
+--------------------------------------------------------------*/
+
+/*--------------------------------------------------------------
+# Group Quiz Report
+--------------------------------------------------------------*/
+.uo-groups.uo-quiz-report .buttons-csv.buttons-csv,
+.uo-groups.uo-quiz-report .buttons-excel.buttons-excel,
+.uo-groups.uo-quiz-report a.paginate_button.paginate_button {
+    background: var(--reign-site-sections-bg-color);
+    border: 1px solid var(--reign-site-border-color);
+    color: var(--reign-site-body-text-color);
+}
+
+.uo-groups.uo-quiz-report .buttons-csv.buttons-csv:hover,
+.uo-groups.uo-quiz-report .buttons-excel.buttons-excel:hover,
+.uo-groups.uo-quiz-report a.paginate_button.paginate_button:hover {
+    background: var(--reign-site-sections-bg-color);
+    color: var(--reign-colors-theme);
+    border-color: var(--reign-colors-theme);
+}
+
+.uo-groups.uo-quiz-report #uo-quiz-report-table tbody tr.even.even,
+.uo-groups.uo-quiz-report #uo-quiz-report-table tbody tr.even.even td {
+    background: var(--reign-site-sections-bg-color);
+}
+
+.uo-groups.uo-groups.uo-quiz-report #uo-quiz-report-table_length select {
+    color: var(--reign-site-body-text-color);
+    background-color: var(--reign-site-sections-bg-color);
+    border: 1px solid var(--reign-site-border-color);
+}
+
+/* .wpProQuiz_modal_window {
+    background: var(--reign-site-sections-bg-color);
+}
+
+#wpProQuiz_user_content h2 {
+    border-bottom-color: var(--reign-site-border-color);
+}
+
+#wpProQuiz_user_content table.wp-list-table tbody tr.categoryTr th,
+#wpProQuiz_user_content table.wp-list-table tfoot tr th {
+    background: var(--reign-site-sections-bg-color);
+    border-color: var(--reign-site-border-color);
+} */
+
+/*--------------------------------------------------------------
+# Group Course Report
+--------------------------------------------------------------*/
+.uo-groups-datatable-header .dt-button {
+    background: var(--reign-site-sections-bg-color);
+    border: 1px solid var(--reign-site-border-color);
+    color: var(--reign-site-body-text-color);
+}
+
+button.dt-button:hover:not(.disabled),
+div.dt-button:hover:not(.disabled),
+a.dt-button:hover:not(.disabled),
+input.dt-button:hover:not(.disabled) {
+    background: var(--reign-site-sections-bg-color);
+    color: var(--reign-colors-theme);
+    border-color: var(--reign-colors-theme);
+}
+
+.uo-groups .uo-select select.h3-select {
+    color: var(--reign-site-headings-color);
+}
+
+/*--------------------------------------------------------------
+# Group Management
+--------------------------------------------------------------*/
+.uo-groups .uo-looks-like-h1,
+.uo-groups .uo-looks-like-h2,
+.uo-groups .uo-looks-like-h3,
+.uo-groups .uo-looks-like-h4,
+.uo-groups .uo-looks-like-h5,
+.uo-groups .uo-looks-like-h6,
+.uo-groups h1,
+.uo-groups h2,
+.uo-groups h3,
+.uo-groups h4,
+.uo-groups h5,
+.uo-groups h6 {
+    color: var(--reign-site-headings-color);
+}
+
+.uo-groups-list-of-btns .uo-groups-list {
+    background: var(--reign-site-sections-bg-color);
+    border-color: var(--reign-site-border-color);
+}
+
+.uo-groups-list-of-btns .uo-groups-list:before {
+    border-color: var(--reign-site-sections-bg-color) var(--reign-site-sections-bg-color) transparent transparent;
+    box-shadow: 1px -1px 0 0 var(--reign-site-border-color);
+}
+
+.uo-groups .uo-list li:before {
+    background: var(--reign-site-headings-color);
+}
+
+.uo-groups-bulk,
+.uo-groups-upload-results {
+    background: var(--reign-site-sections-bg-color);
+    border-color: var(--reign-site-border-color);
+    border-radius: var(--reign-form-border-color);
+}
+
+.uo-row.uo-header {
+    background: var(--reign-site-sections-bg-color);
+    padding: 15px;
+    border: 1px solid var(--reign-site-border-color);
+    border-radius: var(--reign-global-border-radius);
+}
