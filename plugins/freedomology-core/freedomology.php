@@ -48,8 +48,7 @@ class Freedomology {
      */
     private function init_hooks() {
         add_action( 'init', [ $this, 'initialize_plugin_features' ] );
-
-        if ( class_exists('GFForms') && class_exists('uncanny_learndash_groups\ProcessManualGroup') ) {
+        if ( class_exists('GFForms') ) {
             add_action('gform_after_submission_1', [ $this, 'ghl_learning_network_create_group_form_1' ], 10, 2);
         }
 		
@@ -71,6 +70,7 @@ class Freedomology {
      * Create a Group Using Gravity Form via Uncanny LearnDash Groups Plugin
      */
     public function ghl_learning_network_create_group_form_1($entry, $form) {
+
         $first_name   = rgar($entry, '1');
         $last_name    = rgar($entry, '3');
         $email        = rgar($entry, '4');
@@ -97,9 +97,10 @@ class Freedomology {
             'ulgm_group_image'             => $group_image,
             'ulgm_group_customer_id'       => $customer_id,
         );
-
-        add_filter('ulgm_filter_var_is_front_end', function(){ return 'yes'; });
-        $group_id = \uncanny_learndash_groups\ProcessManualGroup::process( $args, $_POST );
+		if ( class_exists('uncanny_learndash_groups\ProcessManualGroup') ) {
+			add_filter('ulgm_filter_var_is_front_end', function(){ return 'yes'; });
+			$group_id = \uncanny_learndash_groups\ProcessManualGroup::process( $args, $_POST );
+		}
     }
 	
 	/**
