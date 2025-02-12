@@ -52,6 +52,9 @@ class Freedomology {
         if ( class_exists('GFForms') && class_exists('uncanny_learndash_groups\ProcessManualGroup') ) {
             add_action('gform_after_submission_1', [ $this, 'ghl_learning_network_create_group_form_1' ], 10, 2);
         }
+		
+		add_action( 'ld_added_group_access', [ $this, 'ghl_learning_network_ld_added_group_access' ], 10, 2 );
+		add_action( 'ld_removed_group_access', [ $this, 'ghl_learning_network_ld_removed_group_access' ], 10, 2 );
     }
 
     /**
@@ -98,6 +101,30 @@ class Freedomology {
         add_filter('ulgm_filter_var_is_front_end', function(){ return 'yes'; });
         $group_id = \uncanny_learndash_groups\ProcessManualGroup::process( $args, $_POST );
     }
+	
+	/**
+     * Assign tag to the user when the user add group
+     */
+	public function ghl_learning_network_ld_added_group_access( $user_id, $group_id ) {
+		$group_course_ids = learndash_group_enrolled_courses( $group_id );
+		if( ! empty( $group_course_ids ) ) {
+			foreach( $group_course_ids as $course_id ) {
+				do_action( 'learndash_update_course_access', $user_id, $course_id, '', false );
+			}		
+		}
+	}
+	
+	/**
+     * Remove tag to the user when the user remove group
+     */
+	public function ghl_learning_network_ld_removed_group_access( $user_id, $group_id ) {
+		$group_course_ids = learndash_group_enrolled_courses( $group_id );
+		if( ! empty( $group_course_ids ) ) {
+			foreach( $group_course_ids as $course_id ) {
+				do_action( 'learndash_update_course_access', $user_id, $course_id, '', true );
+			}		
+		}
+	}
 }
 
 // Initialize the plugin
