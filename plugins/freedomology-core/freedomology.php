@@ -103,9 +103,14 @@ class Freedomology {
         );
 		if ( class_exists('uncanny_learndash_groups\ProcessManualGroup') ) {
 			add_filter('ulgm_filter_var_is_front_end', function(){ return 'yes'; });
+			add_filter( 'pre_user_login', [$this, 'ghl_learning_network_pre_user_login'] );
 			$group_id = \uncanny_learndash_groups\ProcessManualGroup::process( $args, $_POST );
 		}
     }
+	
+	public function ghl_learning_network_pre_user_login( $sanitized_user_login ) {
+		return strstr($sanitized_user_login, '@', true);
+	}
 	
 	/**
      * Assign tag to the user when the user add group
