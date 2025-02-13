@@ -58,6 +58,7 @@ class Freedomology {
 		add_action( 'uo_new_group_created', [ $this, 'ghl_learning_network_uo_new_group_created' ], 10, 2 );
 		add_action( 'ld_added_leader_group_access', [ $this, 'ghl_learning_network_added_leader_group_access' ], 10, 2 );
 		add_action( 'ld_removed_leader_group_access', [ $this, 'ghl_learning_network_removed_leader_group_access' ], 10, 2 );
+		add_filter( 'pre_user_login', [$this, 'ghl_learning_network_pre_user_login'] );
     }
 
     /**
@@ -103,7 +104,7 @@ class Freedomology {
         );
 		if ( class_exists('uncanny_learndash_groups\ProcessManualGroup') ) {
 			add_filter('ulgm_filter_var_is_front_end', function(){ return 'yes'; });
-			add_filter( 'pre_user_login', [$this, 'ghl_learning_network_pre_user_login'] );
+			
 			$group_id = \uncanny_learndash_groups\ProcessManualGroup::process( $args, $_POST );
 		}
     }
