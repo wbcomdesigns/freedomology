@@ -54,6 +54,10 @@ class Freedomology {
 		
 		add_action( 'ld_added_group_access', [ $this, 'ghl_learning_network_ld_added_group_access' ], 10, 2 );
 		add_action( 'ld_removed_group_access', [ $this, 'ghl_learning_network_ld_removed_group_access' ], 10, 2 );
+		
+		add_action( 'uo_new_group_created', [ $this, 'ghl_learning_network_uo_new_group_created' ], 10, 2 );
+		add_action( 'ld_added_leader_group_access', [ $this, 'ghl_learning_network_added_leader_group_access' ], 10, 2 );
+		add_action( 'ld_removed_leader_group_access', [ $this, 'ghl_learning_network_removed_leader_group_access' ], 10, 2 );
     }
 
     /**
@@ -125,6 +129,36 @@ class Freedomology {
 				do_action( 'learndash_update_course_access', $user_id, $course_id, '', true );
 			}		
 		}
+	}
+	
+	function ghl_learning_network_uo_new_group_created( $group_id, $group_leader_id ) {
+		$this->ghl_learning_network_added_leader_group_access( $group_leader_id, $group_id );		
+	}
+	public function ghl_learning_network_added_leader_group_access( $user_id, $group_id ) {
+		$group_course_ids = learndash_group_enrolled_courses( $group_id );
+		if( ! empty( $group_course_ids ) ) {
+			foreach( $group_course_ids as $course_id ) {
+				$tag_name = trim( sanitize_text_field( wp_unslash( get_the_title($course_id) . ' Leader' ) ) );
+				$tag_id 	= wpf_get_tag_id( $tag_name );
+				if( $tag_id == false ) {
+					$tag_id   	 = wp_fusion()->crm->add_tag( $tag_name );
+				}				
+				wp_fusion()->user->apply_tags( [$tag_id] , $user_id );				
+			}		
+		}
+	}
+	
+	public function ghl_learning_network_removed_leader_group_access( $user_id, $group_id ) {
+		$group_course_ids = learndash_group_enrolled_courses( $group_id );		
+		if( ! empty( $group_course_ids ) ) {
+			foreach( $group_course_ids as $course_id ) {
+				$tag_name 	= trim( sanitize_text_field( wp_unslash( get_the_title($course_id) . ' Leader' ) ) );				
+				$tag_id 	= wpf_get_tag_id( $tag_name );				
+				if ( $tag_id !=  false ) {					
+					wp_fusion()->user->remove_tags( [$tag_id], $user_id );
+				}
+			}		
+		}		
 	}
 }
 
