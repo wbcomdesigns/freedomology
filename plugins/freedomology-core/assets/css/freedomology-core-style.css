@@ -1,0 +1,68 @@
+.course-list-freedomology {
+ 	background: #242424;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 2px #EEEEEE4D solid;
+    padding: 20px;
+    max-width: 100%;
+    width: 100%;
+    display: flex;
+    gap: 20px;
+}
+
+.course-list-freedomology .course-list-img{
+	flex: 0 0 45%;
+}
+
+.course-list-freedomology .course-list-img img{
+	border-radius:15px;
+}
+
+
+.course-list-freedomology .course-list-title{
+    font-family: "Helvetica", Sans-serif;
+    font-size: 32px;
+	line-height: normal;
+    font-weight: bold;
+    letter-spacing: 0px;
+    color: #FFFFFF;
+	margin:10px 0;
+}
+
+.course-list-freedomology .course-short-content{
+	color: #FFFFFF;
+    font-family: "Arial", Sans-serif;
+    font-size: 17px;
+    font-weight: 300;
+    line-height: 24px;
+	margin-bottom:20px;
+}
+
+.learn-more-btn a{
+    background-color: #FFFCFC00;
+    color: #FFFFFF;
+    border: 1px solid #fff;
+    border-radius: 100px;
+    padding: 10px 30px;
+    text-align: center;
+    display: inline-block;
+    transition: all 0.3s;
+}
+
+.learn-more-btn a:hover{
+	background-color: #FFFFFF;
+    color: #000000;
+}
+
+
+@media screen and (max-width: 600px) {
+ 	
+	.course-list-freedomology{
+		display:block;
+	}
+	
+	
+}
+
+
+

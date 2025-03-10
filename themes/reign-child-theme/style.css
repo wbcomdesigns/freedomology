@@ -24,8 +24,8 @@ h4,
 h5,
 h6,
 .widget-title {
-    font-family: 'Helvetica', sans-serif;
-    font-weight: bold;
+    font-family: "Helvetica", Sans-serif;
+    font-weight: 700;
 }
 
 /* Subheadlines - Helvetica Regular */
@@ -42,8 +42,8 @@ h6,
 .uo-groups h4,
 .uo-groups h5,
 .uo-groups h6 {
-    font-family: 'Helvetica', sans-serif;
-    font-weight: normal;
+    font-family: "Helvetica", Sans-serif;
+    font-weight: 400;
 }
 
 /* Taglines & Emphasized Keywords - Times New Roman Italic */
@@ -55,7 +55,7 @@ h6,
 
 /* Body - Arial Regular */
 body {
-    font-family: 'Arial', sans-serif;
+   font-family: "Arial", Sans-serif;
 }
 
 /*--------------------------------------------------------------
@@ -406,3 +406,138 @@ input.dt-button:hover:not(.disabled) {
     border: 1px solid var(--reign-site-border-color);
     border-radius: var(--reign-global-border-radius);
 }
+
+/* R40 */
+.fl-rich-text__text {
+    display: inline-block;
+    margin-right: 10px;
+}
+
+.color_17 {
+    color: rgb(255, 16, 95);
+}
+
+.color_18 {
+	color: rgb(35, 241, 238);
+}
+
+/* Register Field Pass Strength */
+.buddypress-wrap #pass-strength-result.short {
+    background-color: #ffa0a0;
+    border-color: #f04040;
+    color: #fff;
+}
+
+.buddypress-wrap #pass-strength-result.mismatch {
+    background-color: #333;
+    border-color: transparent;
+    color: #fff;
+}
+
+.buddypress-wrap #pass-strength-result.error,
+.buddypress-wrap #pass-strength-result.bad {
+    background-color: #ffb78c;
+    border-color: #ff853c;
+    color: #fff;
+}
+
+.buddypress-wrap #pass-strength-result.short {
+    background-color: #ffa0a0;
+    border-color: #f04040;
+    color: #fff;
+}
+
+.buddypress-wrap #pass-strength-result.strong {
+    background-color: #66d66e;
+    border-color: #438c48;
+    color: #fff;
+}
+
+.ld-focus-content .ld-focus-comments #ld-comments-post-button{
+	display:none;
+}
+
+.dark-mode-form .gform-theme .gform_body .gfield .gfield_label {
+	color:#fff;
+}
+
+.dark-mode-form .gform-theme .gform_body .gform_fields {
+	row-gap:15px;
+}
+
+
+.dark-mode-form .gform-theme .gform_body .gform_fields .gfield_consent_label{
+	font-size:13px;
+	color:#fff;
+}
+
+.dark-mode-form .gform-theme .gform_required_legend{
+	font-size: 12px;
+    margin: 0 0 8px;
+    color: #fff;
+}
+
+.gform-theme .gform-footer .gform_button.button{
+	width: 100% !important;
+    border-radius: 30px !important;
+    padding: 15px !important;
+    background: #23f1ee !important;
+    color: #242424 !important;
+    font-size: 15px !important;
+    margin-bottom: 10px !important;
+}
+
+.gform-theme--framework .gfield--input-type-datepicker .ginput_container_date input{
+	width: 100%;
+}
+
+.gform-theme--foundation .gfield select{
+	border-radius: var(--reign-global-form-radius)!important;
+}
+
+.gform-theme .gform_body .gfield .gfield_label {
+	color:#000;
+}
+
+.gform-theme .gform_body .gform_fields {
+	row-gap:15px;
+}
+
+
+.gform-theme .gform_body .gform_fields .gfield_consent_label{
+	font-size:13px;
+	color:#000;
+}
+
+.gform-theme .gform_required_legend{
+	font-size: 12px;
+    margin: 0 0 8px;
+    color: #000;
+}
+
+.gform-theme .gform_body .gfield .gfield_label,
+.gform-theme--framework .field_sublabel_above .gform-field-label--type-sub{
+	font-size:14px;
+	color:#000;
+}
+
+
+.gform-theme input[type=color], 
+.gform-theme input[type=date], 
+.gform-theme input[type=datetime-local], 
+.gform-theme input[type=datetime], 
+.gform-theme input[type=email], 
+.gform-theme input[type=month], 
+.gform-theme input[type=number], 
+.gform-theme input[type=password], 
+.gform-theme input[type=search], 
+.gform-theme input[type=tel], 
+.gform-theme input[type=text], 
+.gform-theme input[type=time], 
+.gform-theme input[type=url], 
+.gform-theme input[type=week]{
+	height: 42px !important;
+    border-color: #ccc !important;
+}
+
+

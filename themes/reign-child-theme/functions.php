@@ -17,7 +17,7 @@ define('REIGN_CHILD_THEME_VERSION', '1.0.0');
 /**
  * Enqueue styles.
  */
-add_action('wp_enqueue_scripts', 'child_enqueue_styles', 99);
+add_action('wp_enqueue_scripts', 'child_enqueue_styles', 5002);
 
 function child_enqueue_styles() {
     $parent_style = 'parent-style';
@@ -34,3 +34,73 @@ if (get_stylesheet() !== get_template()) {
         return $value; // prevent update to child theme mods
     }, 10, 2);
 }
+
+// update fonts on kirki customizer  
+
+add_filter( 'kirki_fonts_standard_fonts', function( $standard_fonts ) {
+    $standard_fonts['arial'] = [
+        'label' => 'Arial',
+        'stack' => 'Arial, Helvetica, sans-serif',
+    ];
+
+    $standard_fonts['times_new_roman'] = [
+        'label' => 'Times New Roman',
+        'stack' => '"Times New Roman", Times, serif',
+    ];
+
+    $standard_fonts['helvetica'] = [
+        'label' => 'Helvetica',
+        'stack' => 'Helvetica, sans-serif',
+    ];
+
+    return $standard_fonts;
+} );
+
+
+
+function wbcom_get_filtered_comment_count( $post_id ) {
+    // Check if the user is logged in
+    if ( ! is_user_logged_in() ) {
+        return 0; // Return 0 if the user is not logged in
+    }
+
+    // Get the current user object
+    $current_user = wp_get_current_user();
+
+    // Check if the user is an admin
+    if ( in_array( 'administrator', (array) $current_user->roles ) ) {
+        // Return the total comment count for admins
+        return wp_count_comments( $post_id )->approved; // Count only approved comments
+    }
+
+    // Check if the post type is 'sfwd-lessons' or 'sfwd-topic'
+    if ( 'sfwd-lessons' === get_post_type( $post_id ) || 'sfwd-topic' === get_post_type( $post_id ) ) {
+        // Get the groups of the logged-in user
+        $login_user_groups = learndash_get_users_group_ids( get_current_user_id(), false );
+
+        // Get all comments for the post
+        $comments = get_comments( array( 'post_id' => $post_id ) );
+
+        // Initialize a counter for filtered comments
+        $filtered_comment_count = 0;
+
+        // Loop through each comment
+        foreach ( $comments as $comment ) {
+            // Get the comment author's groups
+            $comment_author_groups = learndash_get_users_group_ids( $comment->user_id, false );
+
+            // Check if there is an intersection between the logged-in user's groups and the comment author's groups
+            if ( ! empty( array_intersect( $login_user_groups, $comment_author_groups ) ) ) {
+                // Increment the counter if they share a group
+                $filtered_comment_count++;
+            }
+        }
+
+        // Return the count of filtered comments
+        return $filtered_comment_count;
+    }
+
+    // Return 0 for other post types
+    return 0;
+}
+
