@@ -52,8 +52,10 @@ class Freedomology {
         add_action( 'init', [ $this, 'initialize_plugin_features' ] );
         add_action( 'wp_enqueue_scripts', [ $this, 'wbcom_enqueue_assets' ] );
         if ( class_exists('GFForms') ) {
-            add_action('gform_after_submission_1', [ $this, 'ghl_learning_network_create_group_form_1' ], 10, 2);
-        }
+	    add_action('gform_after_submission_1', [ $this, 'ghl_learning_network_create_group_form_1' ], 10, 2);
+	    add_action('gform_entry_created', [ $this, 'force_after_submission_for_zapier' ], 10, 2);
+	}
+
 		
 		add_action( 'ld_added_group_access', [ $this, 'ghl_learning_network_ld_added_group_access' ], 10, 2 );
 		add_action( 'ld_removed_group_access', [ $this, 'ghl_learning_network_ld_removed_group_access' ], 10, 2 );
@@ -82,6 +84,13 @@ class Freedomology {
         // Add custom post types, taxonomies, or other initialization code here.
     }
 
+public function force_after_submission_for_zapier($entry, $form) {
+    $form_id = 1; // Change this to match your form ID
+
+    if ((int) $entry['form_id'] === $form_id) {
+        do_action('gform_after_submission', $entry, $form);
+    }
+}
 
     public function wbcom_enqueue_assets() {
     	wp_enqueue_style( 'freedomology-core', FREEDOMOLOGY_PLUGIN_URL . 'assets/css/freedomology-core-style.css', array(), time(), 'all' );
