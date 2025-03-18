@@ -52,10 +52,9 @@ class Freedomology {
         add_action( 'init', [ $this, 'initialize_plugin_features' ] );
         add_action( 'wp_enqueue_scripts', [ $this, 'wbcom_enqueue_assets' ] );
         if ( class_exists('GFForms') ) {
-	    add_action('gform_after_submission_1', [ $this, 'ghl_learning_network_create_group_form_1' ], 10, 2);
-	    add_action('gform_entry_created', [ $this, 'force_after_submission_for_zapier' ], 10, 2);
-	}
-
+            add_action('gform_after_submission_1', [ $this, 'ghl_learning_network_create_group_form_1' ], 10, 2);
+            add_action('gform_entry_created', array( $this, 'wbcom_learning_network_create_group_form'), 10, 2 );
+        }
 		
 		add_action( 'ld_added_group_access', [ $this, 'ghl_learning_network_ld_added_group_access' ], 10, 2 );
 		add_action( 'ld_removed_group_access', [ $this, 'ghl_learning_network_ld_removed_group_access' ], 10, 2 );
@@ -65,13 +64,29 @@ class Freedomology {
 		add_action( 'ld_removed_leader_group_access', [ $this, 'ghl_learning_network_removed_leader_group_access' ], 10, 2 );
 		add_action( 'ulgm_after_add_invite_form_fields', array( $this, 'wbcom_add_invite_form_fields' ), 10, 2 );
 		add_filter( 'gform_field_validation_2_8', array( $this, 'wbcom_validate_invitation_code' ), 10, 4 );
-		add_action( 'gform_user_registered', array( $this, 'wpcom_cleanup_user_signup' ), 999, 4 );
+		add_action( 'gform_user_registered', array( $this, 'wbcom_cleanup_user_signup' ), 10, 4 );
 		add_action( 'bp_init', array( $this, 'wbcom_disable_activation_email' ) );
 		add_action( 'wp_head', array( $this, 'wbcom_style_invite_with_link' ) );
 		add_action( 'wp_footer', array( $this, 'wbcom_scripts_invite_with_link' ) );
 		add_filter( 'learndash_focus_mode_comments', array( $this, 'wbcom_learndash_enable_comments_focus_mode' ), 10, 2 );
 		add_filter( 'comments_array', array( $this, 'wbcom_filter_comments_for_same_group_users' ), -10, 2 );
 		add_shortcode( 'signup_course', array( $this, 'wbcom_render_signup_course' ) );
+		add_shortcode( 'sprint_name', array( $this, 'wbcom_render_sprint_name' ) );
+		add_filter( 'body_class', array( $this, 'wbcom_manage_body_classes' ) );
+		
+
+		add_filter(
+			'gform_is_feed_asynchronous',
+			function ( $is_asynchronous, $feed, $entry, $form ) {
+				if ( ! $is_asynchronous || rgar( $feed, 'addon_slug' ) !== 'gravityformsuserregistration' ) {
+					return $is_asynchronous;
+				}
+
+				return gf_user_registration()->is_update_feed( $feed ) ? $is_asynchronous : false;
+			},
+			10,
+			4
+		);
     }
 
     /**
@@ -84,13 +99,6 @@ class Freedomology {
         // Add custom post types, taxonomies, or other initialization code here.
     }
 
-public function force_after_submission_for_zapier($entry, $form) {
-    $form_id = 1; // Change this to match your form ID
-
-    if ((int) $entry['form_id'] === $form_id) {
-        do_action('gform_after_submission', $entry, $form);
-    }
-}
 
     public function wbcom_enqueue_assets() {
     	wp_enqueue_style( 'freedomology-core', FREEDOMOLOGY_PLUGIN_URL . 'assets/css/freedomology-core-style.css', array(), time(), 'all' );
@@ -298,29 +306,48 @@ public function force_after_submission_for_zapier($entry, $form) {
 
 
 
-	public function wpcom_cleanup_user_signup( $user_id, $feed, $entry, $user_pass ) {
-		$code     = isset( $entry[9] ) ? sanitize_text_field( $entry[9] ) : '';
-		$group_id = isset( $entry[6] ) ? absint( $entry[6] ) : 0;
+	public function wbcom_cleanup_user_signup( $user_id, $feed, $entry, $user_pass ) {
 
-		if ( '' === $code ) {
+		$form = GFFormsModel::get_form_meta( $entry['form_id'] );
+		$meta = $feed['meta'];
+
+		if ( ! $user_pass ) {
+			$user_pass = gf_user_registration()->get_meta_value( 'password', $meta, $form, $entry );
+		}
+
+		$code     = isset( $entry[8] ) ? $entry[8] : '';
+		$group_id = isset( $entry[6] ) ? $entry[6] : 0;
+
+		if ( empty( $code ) ) {
 			return;
 		}
 
-		$this->wbcom_auto_activate_user( $user_login );
-
+		// Update user meta with the used code
 		update_user_meta( $user_id, '_ulgm_code_used', $code );
 
+		// Assign user to group
 		$result = ulgm()->group_management->set_user_to_code( $user_id, $code, SharedFunctions::$not_started_status, $group_id );
+
 		if ( $result ) {
 			SharedFunctions::set_user_to_group( $user_id, $group_id );
 		}
 
-		wp_set_auth_cookie( $user_id );
-		wp_set_current_user( $user_id, $user_login );
+		// Get user data
+		$user = get_userdata( $user_id );
 
-		$redirect_url = bp_core_get_user_domain( $user_id );
-		wp_safe_redirect( $redirect_url );
-		exit;
+		if ( $user ) {
+			$creds = array(
+				'user_login'    => $user->user_login,
+				'user_password' => $user_pass,
+				'remember'      => true,
+			);
+
+			add_filter( 'check_password', '__return_true' );
+
+			$login_user = wp_signon( $creds, false );
+
+			remove_filter( 'check_password', '__return_true' );
+		}
 	}
 
 	function wbcom_disable_activation_email() {
@@ -503,6 +530,33 @@ public function force_after_submission_for_zapier($entry, $form) {
 	    $output = ob_get_clean(); // Use ob_get_clean() to get the buffer contents and clean it
 
 	    return $output;
+	}
+
+	public function wbcom_render_sprint_name() {
+		$group_id = isset($_GET['group_id']) ? sanitize_text_field($_GET['group_id']) : '';
+		$return = '';
+
+		if( ! empty( $group_id ) ) {
+			return get_the_title( $group_id );
+		}
+	}
+
+
+	public function wbcom_manage_body_classes( $classes ) {
+		if( is_page( 'sign-up' ) ) {
+			if( isset( $_GET['group_id'] ) && isset( $_GET['course_id'] ) ) {
+				$classes[] = sanitize_title( get_the_title( $_GET['course_id'] ) );
+			}
+		}
+
+		return $classes;
+	}
+
+	public function wbcom_learning_network_create_group_form( $entry, $form ) {
+		$form_id = 1; // Replace with your actual form ID
+	    if ( (int) $entry['form_id'] === $form_id ) {
+	        do_action('gform_after_submission', $entry, $form);
+	    }
 	}
 }
 
