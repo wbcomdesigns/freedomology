@@ -52,10 +52,10 @@ class Freedomology {
         add_action( 'init', [ $this, 'initialize_plugin_features' ] );
         add_action( 'wp_enqueue_scripts', [ $this, 'wbcom_enqueue_assets' ] );
         if ( class_exists('GFForms') ) {
-            add_action('gform_after_submission_1', [ $this, 'ghl_learning_network_create_group_form_1' ], 10, 2);
-            add_action('gform_entry_created', array( $this, 'wbcom_learning_network_create_group_form'), 10, 2 );
+            add_action('gform_after_submission_1', [ $this, 'ghl_learning_network_create_group_form_1' ], 10, 2);            
         }
 		
+		add_action( 'gform_post_add_entry', [ $this, 'wbcom_zapier_gform_entry_created'], 10, 2 );
 		add_action( 'ld_added_group_access', [ $this, 'ghl_learning_network_ld_added_group_access' ], 10, 2 );
 		add_action( 'ld_removed_group_access', [ $this, 'ghl_learning_network_ld_removed_group_access' ], 10, 2 );
 		
@@ -124,7 +124,16 @@ class Freedomology {
             $customer    = wp_get_current_user();
             $customer_id = $customer->ID;
         }
-
+		
+		/* 
+		 * Get the Course id from the Course Title.
+		 */
+		if( is_string( $course_id ) ) {
+			global $wpdb;
+			$sql 	= $wpdb->prepare("SELECT ID FROM $wpdb->posts WHERE post_title = %s AND post_type = %s", $course_id, 'sfwd-courses');
+			$course_id 	= $wpdb->get_var( $sql );
+		}
+		
         $args = array(
             'ulgm_group_leader_first_name' => $first_name,
             'ulgm_group_leader_last_name'  => $last_name,
@@ -552,10 +561,12 @@ class Freedomology {
 		return $classes;
 	}
 
-	public function wbcom_learning_network_create_group_form( $entry, $form ) {
-		$form_id = 1; // Replace with your actual form ID
+	public function wbcom_zapier_gform_entry_created( $entry, $form ) {
+		$form_id = 1; // Replace with your actual form ID		
 	    if ( (int) $entry['form_id'] === $form_id ) {
-	        do_action('gform_after_submission', $entry, $form);
+			error_log( print_r( $entry, true ) . "\r\n", 3, plugin_dir_path( __FILE__ ) . '/error_log.txt' );
+			
+	        do_action( 'gform_after_submission_' . $entry['form_id'], $entry, $form );
 	    }
 	}
 }
