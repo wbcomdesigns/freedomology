@@ -65,6 +65,8 @@ class Freedomology {
 		add_action( 'ulgm_after_add_invite_form_fields', array( $this, 'wbcom_add_invite_form_fields' ), 10, 2 );
 		add_filter( 'gform_field_validation_2_8', array( $this, 'wbcom_validate_invitation_code' ), 10, 4 );
 		add_action( 'gform_user_registered', array( $this, 'wbcom_cleanup_user_signup' ), 10, 4 );
+        // Added new hook for invite link registration
+        add_action( 'gform_user_registered', array( $this, 'wbcom_handle_invite_registration' ), 9, 3 );
 		add_action( 'bp_init', array( $this, 'wbcom_disable_activation_email' ) );
 		add_action( 'wp_head', array( $this, 'wbcom_style_invite_with_link' ) );
 		add_action( 'wp_footer', array( $this, 'wbcom_scripts_invite_with_link' ) );
@@ -73,6 +75,8 @@ class Freedomology {
 		add_shortcode( 'signup_course', array( $this, 'wbcom_render_signup_course' ) );
 		add_shortcode( 'sprint_name', array( $this, 'wbcom_render_sprint_name' ) );
 		add_filter( 'body_class', array( $this, 'wbcom_manage_body_classes' ) );
+        // Added new filter for seat validation
+        add_filter( 'ulgm_validate_seat_availability', array( $this, 'skip_seat_validation_for_invite_links' ), 10, 2 );
 		
 
 		add_filter(
@@ -209,86 +213,151 @@ class Freedomology {
 		}		
 	}
 
+    /**
+     * Generate a permanent invite link for a LearnDash group
+     * 
+     * @param int $group_id The LearnDash group ID
+     * @return string The permanent invite URL
+     */
+    public function generate_permanent_group_invite_link($group_id) {
+        // Create a unique but permanent hash for this group
+        $hash = wp_hash($group_id . get_option('site_secret_key', ''));
+        $hash = substr($hash, 0, 12); // Shortened for URL friendliness
+        
+        // Get the first course in the group
+        $group_course_ids = learndash_group_enrolled_courses($group_id);
+        $course_id = !empty($group_course_ids) ? $group_course_ids[0] : 0;
+        
+        $invite_url = add_query_arg(
+            array(
+                'group_id' => $group_id,
+                'course_id' => $course_id,
+                'invite_key' => $hash,
+            ),
+            home_url('/sign-up/')
+        );
+        
+        return $invite_url;
+    }
+
+    /**
+     * Validate a group invitation key
+     * 
+     * @param int $group_id The LearnDash group ID
+     * @param string $invite_key The invitation key to validate
+     * @return bool True if valid, false otherwise
+     */
+    public function validate_group_invite_key($group_id, $invite_key) {
+        $expected_key = substr(wp_hash($group_id . get_option('site_secret_key', '')), 0, 12);
+        return $invite_key === $expected_key;
+    }
+
+    /**
+     * Process a user signup via invite link
+     * 
+     * @param int $user_id The WordPress user ID
+     * @param int $group_id The LearnDash group ID
+     * @param string $invite_key The invitation key
+     * @return bool True if successful, false otherwise
+     */
+    public function wbcom_process_invite_signup($user_id, $group_id, $invite_key) {
+        // Validate the invite key
+        if (!$this->validate_group_invite_key($group_id, $invite_key)) {
+            return false;
+        }
+        
+        // Check if the group has available seats
+        $remaining_seats = ulgm()->group_management->seat->remaining_seats($group_id);
+        if ($remaining_seats <= 0) {
+            return false;
+        }
+        
+        // Add user to the group directly
+        $result = SharedFunctions::set_user_to_group($user_id, $group_id);
+        
+        // Store record that this user was added via invite link
+        if ($result) {
+            update_user_meta($user_id, '_joined_via_group_invite', $group_id);
+        }
+        
+        return $result;
+    }
+
+    /**
+     * Handle registration from invite links
+     * 
+     * @param int $user_id The new user ID
+     * @param array $feed The form feed
+     * @param array $entry The form entry
+     */
+    public function wbcom_handle_invite_registration($user_id, $feed, $entry) {
+        // Check if this is an invite registration
+        if (isset($_GET['group_id']) && isset($_GET['invite_key'])) {
+            $group_id = intval($_GET['group_id']);
+            $invite_key = sanitize_text_field($_GET['invite_key']);
+            
+            // Process the invite signup
+            $this->wbcom_process_invite_signup($user_id, $group_id, $invite_key);
+        }
+    }
+
+    /**
+     * Skip seat validation for invite links
+     * 
+     * @param bool $validate Whether to validate seat availability
+     * @param int $group_id The LearnDash group ID
+     * @return bool Whether to validate seat availability
+     */
+    public function skip_seat_validation_for_invite_links($validate, $group_id) {
+        if (isset($_GET['invite_key']) && $this->validate_group_invite_key($group_id, $_GET['invite_key'])) {
+            return false; // Skip validation
+        }
+        return $validate;
+    }
+
 	public function wbcom_add_invite_form_fields( $group_id, $object ) {
-
-		$is_hierarchy_setting_enabled = false;
-		if ( function_exists( 'learndash_is_groups_hierarchical_enabled' ) && learndash_is_groups_hierarchical_enabled() && 'yes' === get_option( 'ld_hierarchy_settings_child_groups', 'no' ) ) {
-			if ( ulgm_filter_has_var( 'show-children' ) ) {
-				$is_hierarchy_setting_enabled     = true;
-				$learndash_group_enrolled_courses = LearndashFunctionOverrides::learndash_group_enrolled_courses( $group_id, true );
-			}
-		}
-
-		if ( $is_hierarchy_setting_enabled ) {
-			$post_vars = array(
-				'post_type'      => 'sfwd-courses',
-				'post__in'       => $learndash_group_enrolled_courses,
-				'orderby'        => 'post_title',
-				'order'          => 'ASC',
-				'posts_per_page' => 99999,
-				'nopaging'       => true,
-			);
-		} else {
-			$post_vars = array(
-				'post_type'      => 'sfwd-courses',
-				'meta_key'       => 'learndash_group_enrolled_' . $group_id,
-				'orderby'        => 'post_title',
-				'order'          => 'ASC',
-				'posts_per_page' => 99999,
-				'nopaging'       => true,
-			);
-		}
-
-		// Sort by group courses order settings.
-		$ld_group_courses_order = learndash_get_group_courses_order( $group_id );
-		if ( is_array( $ld_group_courses_order ) ) {
-			$post_vars['orderby'] = ! empty( $ld_group_courses_order['orderby'] ) ? $ld_group_courses_order['orderby'] : $post_vars['orderby'];
-			$post_vars['order']   = ! empty( $ld_group_courses_order['order'] ) ? $ld_group_courses_order['order'] : $post_vars['order'];
-		}
-
-		$post_vars = apply_filters( 'ulgm_group_courses_list_get_posts_vars', $post_vars, $group_id );
-
-		$courses = array();
-
-		$the_query = new \WP_Query( $post_vars );
-		$course    = '';
-		if ( $the_query->have_posts() ) {
-			while ( $the_query->have_posts() ) {
-				$the_query->the_post();
-				$course = get_the_ID();
-			}
-		}
-
-		$code       = ulgm()->group_management->get_sign_up_code_from_group_id( $group_id );
-		$invite_url = add_query_arg(
-			array(
-				'group_id' => $group_id,
-				'course_id' => $course,
-				'code'     => $code,
-			),
-			home_url( '/sign-up/' )
-		);
-
-		?>
-	<div class="uo-row" id="uo_add_user_invite_url" style="display: none;">
-		<label for="wbcom_invite_url">
-			<div class="uo-row__title">
-				<?php _e( 'Invite With Link', 'wbcom' ); ?>
-			</div>
-		</label>
-		<div class="uo_add_user_invite_url_block">
-			<input class="uo-input" type="url" name="wbcom_invite_url" id="wbcom_invite_url" value="<?php echo $invite_url; ?>" readonly />
-			<button class="uo-btn" type="button" onclick="copyInviteUrl()">Copy</button>
-		</div>
-		<span id="copyTooltip" style="visibility: hidden;">URL Copied!</span>
-	</div>
-		<?php
+        // Generate permanent invite link
+        $invite_url = $this->generate_permanent_group_invite_link($group_id);
+        
+        ?>
+        <div class="uo-row" id="uo_add_user_invite_url" style="display: none;">
+            <label for="wbcom_invite_url">
+                <div class="uo-row__title">
+                    <?php _e('Invite With Link', 'wbcom'); ?>
+                </div>
+            </label>
+            <div class="uo_add_user_invite_url_block">
+                <input class="uo-input" type="url" name="wbcom_invite_url" id="wbcom_invite_url" value="<?php echo $invite_url; ?>" readonly />
+                <button class="uo-btn" type="button" onclick="copyInviteUrl()">Copy</button>
+            </div>
+            <span id="copyTooltip" style="visibility: hidden;">URL Copied!</span>
+        </div>
+        <?php
 	}
 
 	public function wbcom_validate_invitation_code( $result, $value, $form, $field ) {
-
 		global $bp;
 		
+        // Check if this is an invite link registration
+        if (isset($_GET['invite_key']) && isset($_GET['group_id'])) {
+            $group_id = intval($_GET['group_id']);
+            $invite_key = sanitize_text_field($_GET['invite_key']);
+            
+            // Validate the invite key
+            if ($this->validate_group_invite_key($group_id, $invite_key)) {
+                // Check seat availability
+                $remaining_seats = ulgm()->group_management->seat->remaining_seats($group_id);
+                if ($remaining_seats <= 0) {
+                    $result['is_valid'] = false;
+                    $result['message'] = esc_html__('No seats available in this group', 'uncanny-learndash-groups');
+                } else {
+                    $result['is_valid'] = true;
+                }
+                return $result;
+            }
+        }
+        
+        // Standard code validation for non-invite link registrations
 		$code = $value;
 		if ( '' === $code && 'no' === $code ) {
 			$result['is_valid'] = false;
@@ -313,10 +382,7 @@ class Freedomology {
 		return $result;
 	}
 
-
-
 	public function wbcom_cleanup_user_signup( $user_id, $feed, $entry, $user_pass ) {
-
 		$form = GFFormsModel::get_form_meta( $entry['form_id'] );
 		$meta = $feed['meta'];
 
@@ -324,22 +390,32 @@ class Freedomology {
 			$user_pass = gf_user_registration()->get_meta_value( 'password', $meta, $form, $entry );
 		}
 
-		$code     = isset( $entry[8] ) ? $entry[8] : '';
-		$group_id = isset( $entry[6] ) ? $entry[6] : 0;
+        // Check if this is an invite link registration
+        if (isset($_GET['group_id']) && isset($_GET['invite_key'])) {
+            $group_id = intval($_GET['group_id']);
+            $invite_key = sanitize_text_field($_GET['invite_key']);
+            
+            // Process the invite signup
+            $this->wbcom_process_invite_signup($user_id, $group_id, $invite_key);
+        } else {
+            // Standard code registration
+            $code = isset($entry[8]) ? $entry[8] : '';
+            $group_id = isset($entry[6]) ? $entry[6] : 0;
 
-		if ( empty( $code ) ) {
-			return;
-		}
+            if (empty($code)) {
+                return;
+            }
 
-		// Update user meta with the used code
-		update_user_meta( $user_id, '_ulgm_code_used', $code );
+            // Update user meta with the used code
+            update_user_meta($user_id, '_ulgm_code_used', $code);
 
-		// Assign user to group
-		$result = ulgm()->group_management->set_user_to_code( $user_id, $code, SharedFunctions::$not_started_status, $group_id );
+            // Assign user to group
+            $result = ulgm()->group_management->set_user_to_code($user_id, $code, SharedFunctions::$not_started_status, $group_id);
 
-		if ( $result ) {
-			SharedFunctions::set_user_to_group( $user_id, $group_id );
-		}
+            if ($result) {
+                SharedFunctions::set_user_to_group($user_id, $group_id);
+            }
+        }
 
 		// Get user data
 		$user = get_userdata( $user_id );
