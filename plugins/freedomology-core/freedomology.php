@@ -261,27 +261,39 @@ class Freedomology {
      * @return bool True if successful, false otherwise
      */
     public function wbcom_process_invite_signup($user_id, $group_id, $invite_key) {
-        // Validate the invite key
-        if (!$this->validate_group_invite_key($group_id, $invite_key)) {
-            return false;
-        }
-        
-        // Check if the group has available seats
-        $remaining_seats = ulgm()->group_management->seat->remaining_seats($group_id);
-        if ($remaining_seats <= 0) {
-            return false;
-        }
-        
-        // Add user to the group directly
-        $result = SharedFunctions::set_user_to_group($user_id, $group_id);
-        
-        // Store record that this user was added via invite link
-        if ($result) {
-            update_user_meta($user_id, '_joined_via_group_invite', $group_id);
-        }
-        
-        return $result;
-    }
+		// Validate the invite key
+		if (!$this->validate_group_invite_key($group_id, $invite_key)) {
+			return false;
+		}
+		
+		// Check if the group has available seats
+		$remaining_seats = ulgm()->group_management->seat->remaining_seats($group_id);
+		if ($remaining_seats <= 0) {
+			return false;
+		}
+		
+		// IMPORTANT: First remove user from all groups to prevent multiple group assignments
+		$user_groups = learndash_get_users_group_ids($user_id);
+		if (!empty($user_groups)) {
+			foreach ($user_groups as $user_group) {
+				// Skip if it's the target group we're trying to add them to
+				if ($user_group == $group_id) continue;
+				
+				// Remove from other groups
+				ld_update_group_access($user_id, $user_group, false);
+			}
+		}
+		
+		// Now add user to the specified group using the original function
+		$result = SharedFunctions::set_user_to_group($user_id, $group_id);
+		
+		// Store record that this user was added via invite link
+		if ($result) {
+			update_user_meta($user_id, '_joined_via_group_invite', $group_id);
+		}
+		
+		return $result;
+	}
 
     /**
      * Handle registration from invite links
