@@ -272,23 +272,19 @@ class Freedomology {
 			return false;
 		}
 		
-		// IMPORTANT: First remove user from all groups to prevent multiple group assignments
-		$user_groups = learndash_get_users_group_ids($user_id);
-		if (!empty($user_groups)) {
-			foreach ($user_groups as $user_group) {
-				// Skip if it's the target group we're trying to add them to
-				if ($user_group == $group_id) continue;
-				
-				// Remove from other groups
-				ld_update_group_access($user_id, $user_group, false);
-			}
-		}
+		// Add user to the specific group in the invite URL
+		$result = ld_update_group_access($user_id, $group_id, true);
 		
-		// Now add user to the specified group using the original function
-		$result = SharedFunctions::set_user_to_group($user_id, $group_id);
-		
-		// Store record that this user was added via invite link
+		// Also ensure they have access to the courses in this group
 		if ($result) {
+			$group_course_ids = learndash_group_enrolled_courses($group_id);
+			if (!empty($group_course_ids)) {
+				foreach ($group_course_ids as $course_id) {
+					learndash_user_set_course_status($user_id, $course_id);
+				}
+			}
+			
+			// Store record that this user was added via invite link
 			update_user_meta($user_id, '_joined_via_group_invite', $group_id);
 		}
 		
