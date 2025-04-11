@@ -64,5 +64,179 @@
 	
 }
 
+.enrolled-course-wrapper .enrolled-course-accordion{
+	border:1px #d5d8dc solid;
+	border-radius:20px;
+	padding:20px;
+}
+
+.enrolled-course-wrapper .enrolled-course-accordion .accordion-title{
+	font-size:24px;
+	font-weight: 600;
+	line-height:1.4;
+	color:#000;
+	margin-bottom:10px;
+}
+
+.enrolled-course-wrapper .enrolled-course-accordion  .course-card{
+	display:flex;
+	align-items:center;
+	gap:20px;
+}
+
+.enrolled-course-wrapper .enrolled-course-accordion  .course-card .course-image{
+	flex:0 0 50%;
+	position:relative;
+}
+
+.enrolled-course-wrapper .enrolled-course-accordion  .course-card .course-image img{
+	border-radius:20px;
+	width:100%;
+}
+
+.enrolled-course-wrapper .enrolled-course-accordion  .course-card .course-image .play-icon{
+	position: absolute;
+    width: 100%;
+    left: 0px;
+    top: 0;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #00000021;
+    border-radius: 18px;
+}
+
+.enrolled-course-wrapper .enrolled-course-accordion  .course-card .course-image .play-icon i{
+	border-radius: 100px;
+    border: 2px #fff solid;
+    padding: 10px;
+    color: #fff;
+    font-size: 30px;
+}
+
+.enrolled-course-wrapper .enrolled-course-accordion  .course-info{
+	color:#000;
+}
+
+.enrolled-course-wrapper .enrolled-course-accordion a.learn-more-btn{
+	background-color: #FFFFFF00;
+    font-family: "Arial", Sans-serif;
+    font-size: 14px;
+    fill: #000000;
+    color: #000000;
+    border-style: solid;
+    border-width: 1px 1px 1px 1px;
+    border-color: #000000;
+    border-radius: 100px 100px 100px 100px;
+    padding: 15px 30px 15px 30px;
+	margin-top:10px;
+}
+
+.enrolled-course-wrapper .enrolled-course-accordion a.learn-more-btn:hover{
+	background-color: #30BFBA;
+    color: #FFFFFF;
+    border-color: #30BFBA;
+}
+
+#video-popup.video-popup-overlay{
+	display:none;
+}
+
+#video-popup.video-popup-overlay.active{
+	justify-content: center;
+    align-items: center;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+	bottom:0px
+	top:0px;
+	left:0px;
+	right:0px;
+    background:rgb(0 0 0 / 80%);
+    inset: 0px;
+    z-index: 99999;
+}
+
+.video-popup-overlay .close-popup{
+	display:none;
+}
 
 
+#video-popup.video-popup-overlay.active .close-popup{
+	display: block;
+    font-size: 48px;
+    color: #fff;
+    position: absolute;
+    top: 0;
+    right: 0;
+	cursor:pointer;
+}
+
+
+#video-popup.video-popup-overlay.active #popup-video-frame{
+	height: 90vh;
+    width: 85vw;
+}
+
+.elementor-widget-ldgiu_invitation_url .ldgiu-group-selection label{
+	display:none;
+}
+
+.elementor-widget-ldgiu_invitation_url .ldgiu-invitation-url-container{
+	display: flex !important;
+	align-items:flex-start;
+	gap:10px;
+}
+
+.elementor-widget-ldgiu_invitation_url .ldgiu-invitation-url-container .ldgiu-invitation-url{
+/* 	display:none; */
+	width:100%;
+	margin-bottom:0px;
+	margin:0px;
+}
+
+.elementor-widget-ldgiu_invitation_url .ldgiu-invitation-url-container .elementor-button{
+	background: rgb(34,223,220);
+	background: linear-gradient(90deg, rgba(34,223,220,1) 0%, rgba(34,237,182,1) 100%);
+    border: none;
+    border-radius: 100px;
+    color: #FFF;
+    font-weight: 600;
+	margin: 0;
+}
+
+.ldgiu-invitation-container{
+	margin-bottom:0px !important;
+}
+
+
+@media only screen and (max-width: 768px) {
+  
+	.enrolled-course-wrapper .enrolled-course-accordion .course-card{
+		flex-wrap:wrap;
+	}
+	
+	.enrolled-course-wrapper .enrolled-course-accordion .course-card .course-image{
+		flex:0 0 100%;
+	}
+	
+}
+
+
+.activity-listing.activity .activity-update-form .activity-form.focus-in--empty #whats-new-content{
+	padding-left:0px !important;
+}
+
+.ld-course-list-items .ld_course_grid .thumbnail .caption p{
+	font-size:15px;
+}
+
+
+.not-enrolled-msg{
+	display:none !important;
+}
+
+.not-enrolled .not-enrolled-msg{
+	display:block !important;
+}

@@ -104,3 +104,21 @@ function wbcom_get_filtered_comment_count( $post_id ) {
     return 0;
 }
 
+
+function add_enrolled_course_class($classes) {
+    // Check if LearnDash plugin is active
+    if (!function_exists('learndash_user_get_enrolled_courses')) {
+        return $classes; // Agar LearnDash active nahi hai to kuch mat karo
+    }
+
+    if (is_user_logged_in()) {
+        $user_id = get_current_user_id();
+        $courses = learndash_user_get_enrolled_courses($user_id);
+
+        if (!empty($courses)) {
+            $classes[] = 'user-enrolled';
+        }
+    }
+    return $classes;
+}
+add_filter('body_class', 'add_enrolled_course_class');

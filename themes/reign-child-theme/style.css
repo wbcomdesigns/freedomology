@@ -478,11 +478,11 @@ input.dt-button:hover:not(.disabled) {
 }
 
 .gform-theme .gform-footer .gform_button.button{
-	width: 100% !important;
-    border-radius: 30px !important;
-    padding: 15px !important;
-    background: #23f1ee !important;
-    color: #242424 !important;
+/*     width: 100% !important; */
+    border-radius: 10px !important;
+    padding: 15px 50px !important;
+    background: #30BFBA !important;
+    color: #ffffff !important;
     font-size: 15px !important;
     margin-bottom: 10px !important;
 }
@@ -537,7 +537,135 @@ input.dt-button:hover:not(.disabled) {
 .gform-theme input[type=url], 
 .gform-theme input[type=week]{
 	height: 42px !important;
-    border-color: #ccc !important;
+    border-color: #242424 !important;
 }
 
+
+.h40-health-sprint .r-40-section,
+.h40-health-sprint .f-40-section,
+.f40-financial-sprint .h-40-section,
+.f40-financial-sprint .r-40-section,
+.r40-relational-sprint .h-40-section,
+.r40-relational-sprint .f-40-section{
+	display:none;
+}
+
+.learndash-course-widget-wrap .lm-tab-course-info ul li.assignment, 
+.learndash-course-widget-wrap .lm-tab-course-info ul li.certificate, 
+.learndash-course-widget-wrap .lm-tab-course-info ul li.courses, 
+.learndash-course-widget-wrap .lm-tab-course-info ul li.leaders, 
+.learndash-course-widget-wrap .lm-tab-course-info ul li.quizzes, 
+.learndash-course-widget-wrap .lm-tab-course-info ul li.students, 
+.learndash-course-widget-wrap .lm-tab-course-info ul li.topics, 
+.learndash-course-widget-wrap .lm-tab-course-info ul li.users,
+.lm-tab-course-content-data .lm-tab-course-info ul li.assignment, 
+.lm-tab-course-content-data .lm-tab-course-info ul li.certificate, 
+.lm-tab-course-content-data .lm-tab-course-info ul li.courses, 
+.lm-tab-course-content-data .lm-tab-course-info ul li.leaders, 
+.lm-tab-course-content-data .lm-tab-course-info ul li.quizzes, 
+.lm-tab-course-content-data .lm-tab-course-info ul li.students, 
+.lm-tab-course-content-data .lm-tab-course-info ul li.topics, 
+.lm-tab-course-content-data .lm-tab-course-info ul li.users{
+	display:none !important;
+}
+
+.ld-breadcrumbs-segments{
+	display:none;
+}
+
+.learndash-wrapper .ld-progress .ld-progress-bar,
+.reign-learndash-focus-modern .learndash-wrapper .ld-focus .ld-focus-sidebar .ld-progress .ld-progress-bar{
+	background: #c7c7c7 !important;
+	border-radius: 10px !important;
+}
+
+.ld-share-video-modern {
+	margin-top: 2rem;
+	padding: 1.5rem;
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+	background-color: #f9fafb;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+	font-family: system-ui, sans-serif;
+}
+
+.ld-share-heading {
+	font-size: 1.25rem;
+	font-weight: 600;
+	margin-bottom: 1rem;
+	color: #111827;
+}
+
+.ld-share-input-wrap {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-bottom: 1rem;
+}
+
+.ld-share-url {
+	flex-grow: 1;
+	padding: 10px;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	font-size: 14px;
+	width: 100%;
+	max-width: 500px;
+}
+
+.ld-share-copy-btn {
+	padding: 10px 16px;
+	background-color: #3b82f6;
+	color: #fff;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-weight: 500;
+	transition: background-color 0.2s ease;
+}
+
+.ld-share-copy-btn:hover {
+	background-color: #2563eb;
+}
+
+.ld-share-icons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+.ld-share-icons a {
+	background-color: #e5e7eb;
+	color: #111827;
+	padding: 8px 14px;
+	border-radius: 6px;
+	text-decoration: none;
+	font-size: 14px;
+	transition: background-color 0.2s ease;
+	font-weight: 500;
+}
+
+.ld-share-icons a:hover {
+	background-color: #d1d5db;
+}
+
+.enrolled-section {
+    display: none;
+}
+body.user-enrolled .enrolled-section {
+    display: block;
+}
+
+.course-accordion-layout.elementor-widget-n-accordion .e-n-accordion-item-title[aria-expanded="false"]{
+	border-radius: 20px;
+	border-bottom-width:1px !important;
+}
+
+.learndash-wrapper .ld-item-list .ld-item-list-item .ld-item-name .ld-item-title{
+	margin-top:5px;
+}
+
+.lm-course-switch-layout.switch-layout{
+	display:none !important;
+}
 
