@@ -1,0 +1,23 @@
+{
+    "name": "wbcomdesigns/freedomology",
+    "description": "A base skeleton plugin for custom development (LearnDash, GravityForms, BuddyBoss, Elementor).",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+      {
+        "name": "Wbcom Designs",
+        "email": "contact@wbcomdesigns.com",
+        "homepage": "https://wbcomdesigns.com"
+      }
+    ],
+    "require": {},
+    "autoload": {
+      "psr-4": {
+        "Freedomology\\": "includes/"
+      }
+    },
+    "scripts": {
+      "make-pot": "wp i18n make-pot . languages/freedomology.pot --exclude=node_modules,vendor --domain=freedomology --force"
+    }
+  }
+  
