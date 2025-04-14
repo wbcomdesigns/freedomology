@@ -23,88 +23,86 @@ class Freedomology {
 	/**
 	 * Constructor to initialize the plugin
 	 */
-public function __construct() {
-	$this->define_constants();
-	$this->includes();
-	$this->init_hooks();
-}
+	public function __construct() {
+		$this->define_constants();
+		$this->includes();
+		$this->init_hooks();
+	}
 
 	/**
 	 * Define plugin constants
 	 */
-private function define_constants() {
-	define( 'FREEDOMOLOGY_VERSION', '1.0.0' );
-	define( 'FREEDOMOLOGY_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-	define( 'FREEDOMOLOGY_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-}
+	private function define_constants() {
+		define( 'FREEDOMOLOGY_VERSION', '1.0.0' );
+		define( 'FREEDOMOLOGY_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+		define( 'FREEDOMOLOGY_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+	}
 
 	/**
 	 * Include required files
 	 */
-private function includes() {
-	include plugin_dir_path( __FILE__ ) . '/elements/learndash-group-invitation-url.php';
-	// Include files here when needed
-}
+	private function includes() {
+		include plugin_dir_path( __FILE__ ) . '/elements/learndash-group-invitation-url.php';
+		// Include files here when needed
+	}
 
 	/**
 	 * Initialize hooks
 	 */
-private function init_hooks() {
+	private function init_hooks() {
 
-	add_action( 'init', array( $this, 'initialize_plugin_features' ) );
-	add_action( 'wp_enqueue_scripts', array( $this, 'wbcom_enqueue_assets' ) );
-	if ( class_exists( 'GFForms' ) ) {
-		add_action( 'gform_after_submission_1', array( $this, 'ghl_learning_network_create_group_form_1' ), 10, 2 );
+		add_action( 'init', array( $this, 'initialize_plugin_features' ) );
+		add_action( 'wp_enqueue_scripts', array( $this, 'wbcom_enqueue_assets' ) );
+		if ( class_exists( 'GFForms' ) ) {
+			add_action( 'gform_after_submission_1', array( $this, 'ghl_learning_network_create_group_form_1' ), 10, 2 );
+		}
+
+		// add_action( 'gform_entry_created', [ $this, 'wbcom_zapier_gform_entry_created'], 10, 2 );
+		add_action( 'gform_post_add_entry', array( $this, 'wbcom_zapier_gform_entry_created' ), 10, 2 );
+		add_action( 'ld_added_group_access', array( $this, 'ghl_learning_network_ld_added_group_access' ), 10, 2 );
+		add_action( 'ld_removed_group_access', array( $this, 'ghl_learning_network_ld_removed_group_access' ), 10, 2 );
+
+		add_action( 'uo_new_group_created', array( $this, 'ghl_learning_network_uo_new_group_created' ), 10, 2 );
+		add_action( 'ld_added_leader_group_access', array( $this, 'ghl_learning_network_added_leader_group_access' ), 10, 2 );
+		add_action( 'ld_removed_leader_group_access', array( $this, 'ghl_learning_network_removed_leader_group_access' ), 10, 2 );
+		add_action( 'ulgm_after_add_invite_form_fields', array( $this, 'wbcom_add_invite_form_fields' ), 10, 2 );
+		add_filter( 'gform_field_validation', array( $this, 'wbcom_validate_invitation_code' ), 10, 4 );
+		add_action( 'gform_user_registered', array( $this, 'wbcom_cleanup_user_signup' ), 10, 4 );
+		add_action( 'bp_init', array( $this, 'wbcom_disable_activation_email' ) );
+		add_action( 'wp_head', array( $this, 'wbcom_style_invite_with_link' ) );
+		add_action( 'wp_footer', array( $this, 'wbcom_scripts_invite_with_link' ) );
+		add_filter( 'learndash_focus_mode_comments', array( $this, 'wbcom_learndash_enable_comments_focus_mode' ), 10, 2 );
+		add_filter( 'comments_array', array( $this, 'wbcom_filter_comments_for_same_group_users' ), -10, 2 );
+		add_shortcode( 'signup_course', array( $this, 'wbcom_render_signup_course' ) );
+		add_shortcode( 'sprint_name', array( $this, 'wbcom_render_sprint_name' ) );
+		add_filter( 'body_class', array( $this, 'wbcom_manage_body_classes' ) );
+		add_action( 'add_meta_boxes', array( $this, 'wbcom_add_sfwd_courses_meta_boxes' ) );
+		add_action( 'save_post_sfwd-courses', array( $this, 'wbcom_save_sfwd_courses_meta' ) );
+
+		add_action( 'learndash-content-tabs-content-after', array( $this, 'wbcom_youtube_share_buttons_after_video' ), 10, 4 );
+		add_shortcode( 'dashboard_enrolled_course', array( $this, 'wbcom_render_dashboard_enrolled_course' ) );
+		// add_action( 'elementor/query/user_enrolled_courses', array( $this, 'wbcom_dashboar_course_query_callback' ) );
+		add_action( 'bp_init', array( $this, 'wbcom_render_buddyboss_social_login_on_login_popup' ) );
+		add_action( 'init', array( $this, 'wbcom_login_url_add_add_rewrite_rule' ) );
+		add_filter( 'request', array( $this, 'wbcom_login_filter_login_request' ) );
+		add_filter( 'site_url', array( $this, 'wbcom_login_filter_site_url' ), 10, 4 );
+		add_action( 'template_redirect', array( $this, 'wbcom_redirect_home_to_profile' ), 10 );
+		add_action( 'template_redirect', array( $this, 'wbcom_ld_auto_redirect_to_first_lesson' ), 10 );
+		// add_action('wp_footer', array( $this, 'wbcom_ld_auto_redirect_js' ), 100 );
+
+		add_filter(
+			'gform_is_feed_asynchronous',
+			function ( $is_asynchronous, $feed, $entry, $form ) {
+				if ( ! $is_asynchronous || rgar( $feed, 'addon_slug' ) !== 'gravityformsuserregistration' ) {
+					return $is_asynchronous;
+				}
+
+				return gf_user_registration()->is_update_feed( $feed ) ? $is_asynchronous : false;
+			},
+			10,
+			4
+		);
 	}
-
-	// add_action( 'gform_entry_created', [ $this, 'wbcom_zapier_gform_entry_created'], 10, 2 );
-	add_action( 'gform_post_add_entry', array( $this, 'wbcom_zapier_gform_entry_created' ), 10, 2 );
-	add_action( 'ld_added_group_access', array( $this, 'ghl_learning_network_ld_added_group_access' ), 10, 2 );
-	add_action( 'ld_removed_group_access', array( $this, 'ghl_learning_network_ld_removed_group_access' ), 10, 2 );
-
-	add_action( 'uo_new_group_created', array( $this, 'ghl_learning_network_uo_new_group_created' ), 10, 2 );
-	add_action( 'ld_added_leader_group_access', array( $this, 'ghl_learning_network_added_leader_group_access' ), 10, 2 );
-	add_action( 'ld_removed_leader_group_access', array( $this, 'ghl_learning_network_removed_leader_group_access' ), 10, 2 );
-	add_action( 'ulgm_after_add_invite_form_fields', array( $this, 'wbcom_add_invite_form_fields' ), 10, 2 );
-	add_filter( 'gform_field_validation', array( $this, 'wbcom_validate_invitation_code' ), 10, 4 );
-	add_action( 'gform_user_registered', array( $this, 'wbcom_cleanup_user_signup' ), 10, 4 );
-	// Added new hook for invite link registration
-	add_action( 'gform_user_registered', array( $this, 'wbcom_handle_invite_registration' ), 9, 3 );
-	add_action( 'bp_init', array( $this, 'wbcom_disable_activation_email' ) );
-	add_action( 'wp_head', array( $this, 'wbcom_style_invite_with_link' ) );
-	add_action( 'wp_footer', array( $this, 'wbcom_scripts_invite_with_link' ) );
-	add_filter( 'learndash_focus_mode_comments', array( $this, 'wbcom_learndash_enable_comments_focus_mode' ), 10, 2 );
-	add_filter( 'comments_array', array( $this, 'wbcom_filter_comments_for_same_group_users' ), -10, 2 );
-	add_shortcode( 'signup_course', array( $this, 'wbcom_render_signup_course' ) );
-	add_shortcode( 'sprint_name', array( $this, 'wbcom_render_sprint_name' ) );
-	add_filter( 'body_class', array( $this, 'wbcom_manage_body_classes' ) );
-	add_action( 'add_meta_boxes', array( $this, 'wbcom_add_sfwd_courses_meta_boxes' ) );
-	add_action( 'save_post_sfwd-courses', array( $this, 'wbcom_save_sfwd_courses_meta' ) );
-
-	add_action( 'learndash-content-tabs-content-after', array( $this, 'wbcom_youtube_share_buttons_after_video' ), 10, 4 );
-	add_shortcode( 'dashboard_enrolled_course', array( $this, 'wbcom_render_dashboard_enrolled_course' ) );
-	// add_action( 'elementor/query/user_enrolled_courses', array( $this, 'wbcom_dashboar_course_query_callback' ) );
-	add_action( 'bp_init', array( $this, 'wbcom_render_buddyboss_social_login_on_login_popup' ) );
-	add_action( 'init', array( $this, 'wbcom_login_url_add_add_rewrite_rule' ) );
-	add_filter( 'request', array( $this, 'wbcom_login_filter_login_request' ) );
-	add_filter( 'site_url', array( $this, 'wbcom_login_filter_site_url' ), 10, 4 );
-	add_action( 'template_redirect', array( $this, 'wbcom_redirect_home_to_profile' ), 10 );
-	add_action( 'template_redirect', array( $this, 'wbcom_ld_auto_redirect_to_first_lesson' ), 10 );
-	// add_action('wp_footer', array( $this, 'wbcom_ld_auto_redirect_js' ), 100 );
-
-	add_filter(
-		'gform_is_feed_asynchronous',
-		function ( $is_asynchronous, $feed, $entry, $form ) {
-			if ( ! $is_asynchronous || rgar( $feed, 'addon_slug' ) !== 'gravityformsuserregistration' ) {
-				return $is_asynchronous;
-			}
-
-			return gf_user_registration()->is_update_feed( $feed ) ? $is_asynchronous : false;
-		},
-		10,
-		4
-	);
-}
 
 	/**
 	 * Initialize plugin features
@@ -112,255 +110,126 @@ private function init_hooks() {
 	 * This function is responsible for setting up custom functionalities
 	 * and loading any additional resources required by the plugin.
 	 */
-public function initialize_plugin_features() {
-	// Add custom post types, taxonomies, or other initialization code here.
-}
+	public function initialize_plugin_features() {
+		// Add custom post types, taxonomies, or other initialization code here.
+	}
 
 
-public function wbcom_enqueue_assets() {
-	wp_enqueue_style( 'freedomology-core', FREEDOMOLOGY_PLUGIN_URL . 'assets/css/freedomology-core-style.css', array(), time(), 'all' );
-}
+	public function wbcom_enqueue_assets() {
+		wp_enqueue_style( 'freedomology-core', FREEDOMOLOGY_PLUGIN_URL . 'assets/css/freedomology-core-style.css', array(), time(), 'all' );
+	}
 
 	/**
 	 * Create a Group Using Gravity Form via Uncanny LearnDash Groups Plugin
 	 */
-public function ghl_learning_network_create_group_form_1( $entry, $form ) {
+	public function ghl_learning_network_create_group_form_1( $entry, $form ) {
 
-	$first_name   = rgar( $entry, '1' );
-	$last_name    = rgar( $entry, '3' );
-	$email        = rgar( $entry, '4' );
-	$phone_number = rgar( $entry, '5' );
-	$course_id    = rgar( $entry, '7' );
-	$start_date   = rgar( $entry, '8' );
-	$total_seats  = rgar( $entry, '11' );
-	$group_name   = rgar( $entry, '9' );
-	$group_image  = '';
+		$first_name   = rgar( $entry, '1' );
+		$last_name    = rgar( $entry, '3' );
+		$email        = rgar( $entry, '4' );
+		$phone_number = rgar( $entry, '5' );
+		$course_id    = rgar( $entry, '7' );
+		$start_date   = rgar( $entry, '8' );
+		$total_seats  = rgar( $entry, '11' );
+		$group_name   = rgar( $entry, '9' );
+		$group_image  = '';
 
-	$customer_id = '';
-	if ( is_user_logged_in() ) {
-		$customer    = wp_get_current_user();
-		$customer_id = $customer->ID;
-	}
+		$customer_id = '';
+		if ( is_user_logged_in() ) {
+			$customer    = wp_get_current_user();
+			$customer_id = $customer->ID;
+		}
 
-	/*
-	 * Get the Course id from the Course Title.
-	 */
-	if ( is_string( $course_id ) ) {
-		global $wpdb;
-		$sql       = $wpdb->prepare( "SELECT ID FROM $wpdb->posts WHERE post_title = %s AND post_type = %s", $course_id, 'sfwd-courses' );
-		$course_id = $wpdb->get_var( $sql );
-	}
+		/*
+		 * Get the Course id from the Course Title.
+		 */
+		if ( is_string( $course_id ) ) {
+			global $wpdb;
+			$sql       = $wpdb->prepare( "SELECT ID FROM $wpdb->posts WHERE post_title = %s AND post_type = %s", $course_id, 'sfwd-courses' );
+			$course_id = $wpdb->get_var( $sql );
+		}
 
-	$args = array(
-		'ulgm_group_leader_first_name' => $first_name,
-		'ulgm_group_leader_last_name'  => $last_name,
-		'ulgm_group_leader_email'      => $email,
-		'ulgm_group_name'              => $group_name,
-		'ulgm_group_total_seats'       => ! empty( $total_seats ) ? $total_seats : 15000,
-		'ulgm_group_courses'           => array( $course_id ),
-		'ulgm_group_image'             => $group_image,
-		'ulgm_group_customer_id'       => $customer_id,
-	);
-	if ( class_exists( 'uncanny_learndash_groups\ProcessManualGroup' ) ) {
-		add_filter(
-			'ulgm_filter_var_is_front_end',
-			function () {
-				return 'yes';
-			}
+		$args = array(
+			'ulgm_group_leader_first_name' => $first_name,
+			'ulgm_group_leader_last_name'  => $last_name,
+			'ulgm_group_leader_email'      => $email,
+			'ulgm_group_name'              => $group_name,
+			'ulgm_group_total_seats'       => ! empty( $total_seats ) ? $total_seats : 15000,
+			'ulgm_group_courses'           => array( $course_id ),
+			'ulgm_group_image'             => $group_image,
+			'ulgm_group_customer_id'       => $customer_id,
 		);
-		add_filter( 'pre_user_login', array( $this, 'ghl_learning_network_pre_user_login' ) );
-		$group_id = \uncanny_learndash_groups\ProcessManualGroup::process( $args, $_POST );
+		if ( class_exists( 'uncanny_learndash_groups\ProcessManualGroup' ) ) {
+			add_filter(
+				'ulgm_filter_var_is_front_end',
+				function() {
+					return 'yes';
+				}
+			);
+			add_filter( 'pre_user_login', array( $this, 'ghl_learning_network_pre_user_login' ) );
+			$group_id = \uncanny_learndash_groups\ProcessManualGroup::process( $args, $_POST );
+		}
 	}
-}
 
-public function ghl_learning_network_pre_user_login( $sanitized_user_login ) {
-	return strstr( $sanitized_user_login, '@', true );
-}
+	public function ghl_learning_network_pre_user_login( $sanitized_user_login ) {
+		return strstr( $sanitized_user_login, '@', true );
+	}
 
 	/**
 	 * Assign tag to the user when the user add group
 	 */
-public function ghl_learning_network_ld_added_group_access( $user_id, $group_id ) {
-	$group_course_ids = learndash_group_enrolled_courses( $group_id );
-	if ( ! empty( $group_course_ids ) ) {
-		foreach ( $group_course_ids as $course_id ) {
-			do_action( 'learndash_update_course_access', $user_id, $course_id, '', false );
+	public function ghl_learning_network_ld_added_group_access( $user_id, $group_id ) {
+		$group_course_ids = learndash_group_enrolled_courses( $group_id );
+		if ( ! empty( $group_course_ids ) ) {
+			foreach ( $group_course_ids as $course_id ) {
+				do_action( 'learndash_update_course_access', $user_id, $course_id, '', false );
+			}
 		}
 	}
-}
 
 	/**
 	 * Remove tag to the user when the user remove group
 	 */
-public function ghl_learning_network_ld_removed_group_access( $user_id, $group_id ) {
-	$group_course_ids = learndash_group_enrolled_courses( $group_id );
-	if ( ! empty( $group_course_ids ) ) {
-		foreach ( $group_course_ids as $course_id ) {
-			do_action( 'learndash_update_course_access', $user_id, $course_id, '', true );
-		}
-	}
-}
-
-function ghl_learning_network_uo_new_group_created( $group_id, $group_leader_id ) {
-	$this->ghl_learning_network_added_leader_group_access( $group_leader_id, $group_id );
-}
-public function ghl_learning_network_added_leader_group_access( $user_id, $group_id ) {
-	$group_course_ids = learndash_group_enrolled_courses( $group_id );
-	if ( ! empty( $group_course_ids ) ) {
-		foreach ( $group_course_ids as $course_id ) {
-			$tag_name = trim( sanitize_text_field( wp_unslash( get_the_title( $course_id ) . ' Leader' ) ) );
-			$tag_id   = wpf_get_tag_id( $tag_name );
-			if ( $tag_id == false ) {
-				$tag_id = wp_fusion()->crm->add_tag( $tag_name );
-			}
-			wp_fusion()->user->apply_tags( array( $tag_id ), $user_id );
-		}
-	}
-}
-
-public function ghl_learning_network_removed_leader_group_access( $user_id, $group_id ) {
-	$group_course_ids = learndash_group_enrolled_courses( $group_id );
-	if ( ! empty( $group_course_ids ) ) {
-		foreach ( $group_course_ids as $course_id ) {
-			$tag_name = trim( sanitize_text_field( wp_unslash( get_the_title( $course_id ) . ' Leader' ) ) );
-			$tag_id   = wpf_get_tag_id( $tag_name );
-			if ( $tag_id != false ) {
-				wp_fusion()->user->remove_tags( array( $tag_id ), $user_id );
-			}
-		}
-	}
-}
-
-	/**
-	 * Generate a permanent invite link for a LearnDash group
-	 *
-	 * @param int $group_id The LearnDash group ID
-	 * @return string The permanent invite URL
-	 */
-public function generate_permanent_group_invite_link( $group_id ) {
-	// Create a unique but permanent hash for this group
-	$hash = wp_hash( $group_id . get_option( 'site_secret_key', '' ) );
-	$hash = substr( $hash, 0, 12 ); // Shortened for URL friendliness
-
-	// Get the first course in the group
-	$group_course_ids = learndash_group_enrolled_courses( $group_id );
-	$course_id        = ! empty( $group_course_ids ) ? $group_course_ids[0] : 0;
-
-	$invite_url = add_query_arg(
-		array(
-			'group_id'   => $group_id,
-			'course_id'  => $course_id,
-			'invite_key' => $hash,
-		),
-		home_url( '/sign-up/' )
-	);
-
-	return $invite_url;
-}
-
-	/**
-	 * Validate a group invitation key
-	 *
-	 * @param int    $group_id The LearnDash group ID
-	 * @param string $invite_key The invitation key to validate
-	 * @return bool True if valid, false otherwise
-	 */
-public function validate_group_invite_key( $group_id, $invite_key ) {
-	$expected_key = substr( wp_hash( $group_id . get_option( 'site_secret_key', '' ) ), 0, 12 );
-	return $invite_key === $expected_key;
-}
-
-	/**
-	 * Process a user signup via invite link
-	 *
-	 * @param int    $user_id The WordPress user ID
-	 * @param int    $group_id The LearnDash group ID
-	 * @param string $invite_key The invitation key
-	 * @return bool True if successful, false otherwise
-	 */
-public function wbcom_process_invite_signup( $user_id, $group_id, $invite_key ) {
-	// Validate the invite key
-	if ( ! $this->validate_group_invite_key( $group_id, $invite_key ) ) {
-		return false;
-	}
-
-	// Check if the group has available seats
-	$remaining_seats = ulgm()->group_management->seat->remaining_seats( $group_id );
-	if ( $remaining_seats <= 0 ) {
-		return false;
-	}
-
-	// Add user to the specific group in the invite URL
-	$result = ld_update_group_access( $user_id, $group_id, true );
-
-	// Also ensure they have access to the courses in this group
-	if ( $result ) {
+	public function ghl_learning_network_ld_removed_group_access( $user_id, $group_id ) {
 		$group_course_ids = learndash_group_enrolled_courses( $group_id );
 		if ( ! empty( $group_course_ids ) ) {
 			foreach ( $group_course_ids as $course_id ) {
-				learndash_user_set_course_status( $user_id, $course_id );
+				do_action( 'learndash_update_course_access', $user_id, $course_id, '', true );
 			}
 		}
-
-		// Store record that this user was added via invite link
-		update_user_meta( $user_id, '_joined_via_group_invite', $group_id );
 	}
 
-	return $result;
-}
-
-	/**
-	 * Handle registration from invite links
-	 *
-	 * @param int   $user_id The new user ID
-	 * @param array $feed The form feed
-	 * @param array $entry The form entry
-	 */
-public function wbcom_handle_invite_registration( $user_id, $feed, $entry ) {
-	// Check if this is an invite registration
-	if ( isset( $_GET['group_id'] ) && isset( $_GET['invite_key'] ) ) {
-		$group_id   = intval( $_GET['group_id'] );
-		$invite_key = sanitize_text_field( $_GET['invite_key'] );
-
-		// Process the invite signup
-		$this->wbcom_process_invite_signup( $user_id, $group_id, $invite_key );
+	function ghl_learning_network_uo_new_group_created( $group_id, $group_leader_id ) {
+		$this->ghl_learning_network_added_leader_group_access( $group_leader_id, $group_id );
 	}
-}
-
-	/**
-	 * Skip seat validation for invite links
-	 *
-	 * @param bool $validate Whether to validate seat availability
-	 * @param int  $group_id The LearnDash group ID
-	 * @return bool Whether to validate seat availability
-	 */
-public function skip_seat_validation_for_invite_links( $validate, $group_id ) {
-	if ( isset( $_GET['invite_key'] ) && $this->validate_group_invite_key( $group_id, $_GET['invite_key'] ) ) {
-		return false; // Skip validation
+	public function ghl_learning_network_added_leader_group_access( $user_id, $group_id ) {
+		$group_course_ids = learndash_group_enrolled_courses( $group_id );
+		if ( ! empty( $group_course_ids ) ) {
+			foreach ( $group_course_ids as $course_id ) {
+				$tag_name = trim( sanitize_text_field( wp_unslash( get_the_title( $course_id ) . ' Leader' ) ) );
+				$tag_id   = wpf_get_tag_id( $tag_name );
+				if ( $tag_id == false ) {
+					$tag_id = wp_fusion()->crm->add_tag( $tag_name );
+				}
+				wp_fusion()->user->apply_tags( array( $tag_id ), $user_id );
+			}
+		}
 	}
-	return $validate;
-}
 
-public function wbcom_add_invite_form_fields( $group_id, $object ) {
-	<< << << < Updated upstream
-	// Generate permanent invite link
-	$invite_url = $this->generate_permanent_group_invite_link( $group_id );
+	public function ghl_learning_network_removed_leader_group_access( $user_id, $group_id ) {
+		$group_course_ids = learndash_group_enrolled_courses( $group_id );
+		if ( ! empty( $group_course_ids ) ) {
+			foreach ( $group_course_ids as $course_id ) {
+				$tag_name = trim( sanitize_text_field( wp_unslash( get_the_title( $course_id ) . ' Leader' ) ) );
+				$tag_id   = wpf_get_tag_id( $tag_name );
+				if ( $tag_id != false ) {
+					wp_fusion()->user->remove_tags( array( $tag_id ), $user_id );
+				}
+			}
+		}
+	}
 
-	?>
-		<div class="uo-row" id="uo_add_user_invite_url" style="display: none;">
-			<label for="wbcom_invite_url">
-				<div class="uo-row__title">
-				<?php _e( 'Invite With Link', 'wbcom' ); ?>
-				</div>
-			</label>
-			<div class="uo_add_user_invite_url_block">
-				<input class="uo-input" type="url" name="wbcom_invite_url" id="wbcom_invite_url" value="<?php echo $invite_url; ?>" readonly />
-				<button class="uo-btn" type="button" onclick="copyInviteUrl()">Copy</button>
-			</div>
-			<span id="copyTooltip" style="visibility: hidden;">URL Copied!</span>
-		</div>
-		<?php
-		=== === =
+	public function wbcom_add_invite_form_fields( $group_id, $object ) {
 		// Generate permanent invite link
 		$invite_url = $this->generate_permanent_group_invite_link( $group_id );
 
@@ -368,7 +237,7 @@ public function wbcom_add_invite_form_fields( $group_id, $object ) {
 		<div class="uo-row" id="uo_add_user_invite_url" style="display: none;">
 			<label for="wbcom_invite_url">
 				<div class="uo-row__title">
-				<?php _e( 'Invite With Link', 'wbcom' ); ?>
+					<?php _e( 'Invite With Link', 'wbcom' ); ?>
 				</div>
 			</label>
 			<div class="uo_add_user_invite_url_block">
@@ -378,7 +247,7 @@ public function wbcom_add_invite_form_fields( $group_id, $object ) {
 			<span id="copyTooltip" style="visibility: hidden;">URL Copied!</span>
 		</div>
 		<?php
-}
+	}
 
 
 	/**
@@ -387,26 +256,26 @@ public function wbcom_add_invite_form_fields( $group_id, $object ) {
 	 * @param int $group_id The LearnDash group ID
 	 * @return string The permanent invite URL
 	 */
-public function generate_permanent_group_invite_link( $group_id ) {
-	// Create a unique but permanent hash for this group
-	$hash = wp_hash( $group_id . get_option( 'site_secret_key', '' ) );
-	$hash = substr( $hash, 0, 12 ); // Shortened for URL friendliness
+	public function generate_permanent_group_invite_link( $group_id ) {
+		// Create a unique but permanent hash for this group
+		$hash = wp_hash( $group_id . get_option( 'site_secret_key', '' ) );
+		$hash = substr( $hash, 0, 12 ); // Shortened for URL friendliness
 
-	// Get the first course in the group
-	$group_course_ids = learndash_group_enrolled_courses( $group_id );
-	$course_id        = ! empty( $group_course_ids ) ? $group_course_ids[0] : 0;
+		// Get the first course in the group
+		$group_course_ids = learndash_group_enrolled_courses( $group_id );
+		$course_id        = ! empty( $group_course_ids ) ? $group_course_ids[0] : 0;
 
-	$invite_url = add_query_arg(
-		array(
-			'group_id'  => $group_id,
-			'course_id' => $course_id,
-			'code'      => $hash,
-		),
-		home_url( '/sign-up/' )
-	);
+		$invite_url = add_query_arg(
+			array(
+				'group_id'  => $group_id,
+				'course_id' => $course_id,
+				'code'      => $hash,
+			),
+			home_url( '/sign-up/' )
+		);
 
-	return $invite_url;
-}
+		return $invite_url;
+	}
 
 	/**
 	 * Validate a group invitation key
@@ -415,41 +284,14 @@ public function generate_permanent_group_invite_link( $group_id ) {
 	 * @param string $invite_key The invitation key to validate
 	 * @return bool True if valid, false otherwise
 	 */
-public function wbcom_validate_group_invite_key( $group_id, $invite_key ) {
-	$expected_key = substr( wp_hash( $group_id . get_option( 'site_secret_key', '' ) ), 0, 12 );
-	return $invite_key === $expected_key;
-	>> >> >> > Stashed changes
-}
-
-public function wbcom_validate_invitation_code( $result, $value, $form, $field ) {
-	global $bp;
-	<< << << < Updated upstream
-
-	// Check if this is an invite link registration
-	if ( isset( $_GET['invite_key'] ) && isset( $_GET['group_id'] ) ) {
-		$group_id   = intval( $_GET['group_id'] );
-		$invite_key = sanitize_text_field( $_GET['invite_key'] );
-
-		// Validate the invite key
-		if ( $this->validate_group_invite_key( $group_id, $invite_key ) ) {
-			// Check seat availability
-			$remaining_seats = ulgm()->group_management->seat->remaining_seats( $group_id );
-			if ( $remaining_seats <= 0 ) {
-				$result['is_valid'] = false;
-				$result['message']  = esc_html__( 'No seats available in this group', 'uncanny-learndash-groups' );
-			} else {
-				$result['is_valid'] = true;
-			}
-			return $result;
-		}
+	public function wbcom_validate_group_invite_key( $group_id, $invite_key ) {
+		$expected_key = substr( wp_hash( $group_id . get_option( 'site_secret_key', '' ) ), 0, 12 );
+		return $invite_key === $expected_key;
 	}
 
-	// Standard code validation for non-invite link registrations
-	$code = $value;
-	if ( '' === $code && 'no' === $code ) {
-		$result['is_valid'] = false;
-		$result['message']  = esc_html__( 'Registration code is empty', 'uncanny-learndash-groups' );
-		=== ===             =
+	public function wbcom_validate_invitation_code( $result, $value, $form, $field ) {
+
+		global $bp;
 
 		static $group_id = null;
 		static $code     = null;
@@ -466,7 +308,6 @@ public function wbcom_validate_invitation_code( $result, $value, $form, $field )
 			if ( $field_label === 'Code' ) {
 				$code = $value;
 			}
-			>> >> >> > Stashed changes
 		}
 
 		// Only proceed if we have both values
@@ -499,7 +340,10 @@ public function wbcom_validate_invitation_code( $result, $value, $form, $field )
 		return $result;
 	}
 
+
+
 	public function wbcom_cleanup_user_signup( $user_id, $feed, $entry, $user_pass ) {
+
 		$form = GFFormsModel::get_form_meta( $entry['form_id'] );
 		$meta = $feed['meta'];
 
@@ -507,38 +351,23 @@ public function wbcom_validate_invitation_code( $result, $value, $form, $field )
 			$user_pass = gf_user_registration()->get_meta_value( 'password', $meta, $form, $entry );
 		}
 
-		// Check if this is an invite link registration
-		if ( isset( $_GET['group_id'] ) && isset( $_GET['invite_key'] ) ) {
-			$group_id   = intval( $_GET['group_id'] );
-			$invite_key = sanitize_text_field( $_GET['invite_key'] );
+		$code     = isset( $entry[8] ) ? $entry[8] : '';
+		$group_id = isset( $entry[6] ) ? $entry[6] : 0;
 
-			// Process the invite signup
-			$this->wbcom_process_invite_signup( $user_id, $group_id, $invite_key );
-		} else {
-			// Standard code registration
-			$code     = isset( $entry[8] ) ? $entry[8] : '';
-			$group_id = isset( $entry[6] ) ? $entry[6] : 0;
+		if ( empty( $code ) ) {
+			return;
+		}
 
-			if ( empty( $code ) ) {
-				return;
-			}
+		$code = ulgm()->group_management->get_sign_up_code_from_group_id( $group_id );
 
-			<< << << < Updated upstream
-			// Update user meta with the used code
-			update_user_meta( $user_id, '_ulgm_code_used', $code );
-			=== === =
-			$code   = ulgm()->group_management->get_sign_up_code_from_group_id( $group_id );
+		// Update user meta with the used code
+		update_user_meta( $user_id, '_ulgm_code_used', $code );
 
-			// Update user meta with the used code
-			update_user_meta( $user_id, '_ulgm_code_used', $code );
-			>> >> >> > Stashed changes
+		// Assign user to group
+		$result = ulgm()->group_management->set_user_to_code( $user_id, $code, SharedFunctions::$not_started_status, $group_id );
 
-			// Assign user to group
-			$result = ulgm()->group_management->set_user_to_code( $user_id, $code, SharedFunctions::$not_started_status, $group_id );
-
-			if ( $result ) {
-				SharedFunctions::set_user_to_group( $user_id, $group_id );
-			}
+		if ( $result ) {
+			SharedFunctions::set_user_to_group( $user_id, $group_id );
 		}
 
 		// Get user data
@@ -562,6 +391,7 @@ public function wbcom_validate_invitation_code( $result, $value, $form, $field )
 	function wbcom_disable_activation_email() {
 		remove_action( 'bp_core_signup_send_validation_email', 'bp_core_signup_send_validation_email' );
 	}
+
 
 	// Automatically activate user signups
 	public function wbcom_auto_activate_user( $user_login ) {
@@ -595,6 +425,7 @@ public function wbcom_validate_invitation_code( $result, $value, $form, $field )
 		}
 	}
 
+
 	public function wbcom_style_invite_with_link() {
 		$group_management_page_id = ulgm()->group_management->pages->get_group_management_page_id();
 		if ( $group_management_page_id == get_the_ID() ) {
@@ -609,7 +440,9 @@ public function wbcom_validate_invitation_code( $result, $value, $form, $field )
 			</style>
 			<?php
 		}
+
 	}
+
 
 	public function wbcom_scripts_invite_with_link() {
 		$group_management_page_id = ulgm()->group_management->pages->get_group_management_page_id();
@@ -644,6 +477,7 @@ public function wbcom_validate_invitation_code( $result, $value, $form, $field )
 			</script>
 			<?php
 		}
+
 	}
 
 	public function wbcom_learndash_enable_comments_focus_mode( $status, $object ) {
@@ -653,6 +487,7 @@ public function wbcom_validate_invitation_code( $result, $value, $form, $field )
 		}
 		return $status;
 	}
+
 
 	public function wbcom_filter_comments_for_same_group_users( $comments, $post_id ) {
 		// Check if the user is logged in
@@ -699,6 +534,8 @@ public function wbcom_validate_invitation_code( $result, $value, $form, $field )
 		return $comments;
 	}
 
+
+
 	public function wbcom_render_signup_course() {
 		// Get the course ID from the query parameter and sanitize it
 		$course_id = isset( $_GET['course_id'] ) ? sanitize_text_field( $_GET['course_id'] ) : '';
@@ -741,6 +578,7 @@ public function wbcom_validate_invitation_code( $result, $value, $form, $field )
 			return get_the_title( $group_id );
 		}
 	}
+
 
 	public function wbcom_manage_body_classes( $classes ) {
 		if ( is_page( 'sign-up' ) ) {
@@ -853,6 +691,7 @@ public function wbcom_validate_invitation_code( $result, $value, $form, $field )
 		if ( isset( $_POST['video_link'] ) ) {
 			update_post_meta( $post_id, '_video_link', esc_url_raw( $_POST['video_link'] ) );
 		}
+
 	}
 
 	public function wbcom_render_dashboard_enrolled_course() {
@@ -916,7 +755,7 @@ public function wbcom_validate_invitation_code( $result, $value, $form, $field )
 		</div>
 
 		<script type="text/javascript">
-			// Video Popup
+			 // Video Popup
 			const popupOverlay = document.getElementById("video-popup");
 			const popupFrame = document.getElementById("popup-video-frame");
 
@@ -955,10 +794,11 @@ public function wbcom_validate_invitation_code( $result, $value, $form, $field )
 			return ob_get_clean(); // Return buffered output
 	}
 
+
 	public function wbcom_render_buddyboss_social_login_on_login_popup() {
 		add_action(
 			'reign_login_form_top',
-			function () {
+			function() {
 				if ( class_exists( 'BB_SSO' ) && method_exists( 'BB_SSO', 'render_buttons_with_container' ) ) {
 					echo BB_SSO::render_buttons_with_container(
 						array(
@@ -1033,6 +873,7 @@ public function wbcom_validate_invitation_code( $result, $value, $form, $field )
 		}
 	}
 
+
 	public function wbcom_ld_auto_redirect_js() {
 		if ( ! is_singular( 'sfwd-courses' ) ) {
 			return;
@@ -1067,3 +908,9 @@ public function wbcom_validate_invitation_code( $result, $value, $form, $field )
 
 // Initialize the plugin
 new Freedomology();
+
+
+
+
+
+
