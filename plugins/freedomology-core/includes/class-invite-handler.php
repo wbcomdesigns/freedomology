@@ -46,13 +46,14 @@ class Freedomology_Invite_Handler {
 
 	public function add_invite_form_fields( $group_id, $object ) {
 		$invite_url = $this->generate_invite_link( $group_id );
-		echo '<div class="uo-row" id="uo_add_user_invite_url" style="display:none;">
-			<label><div class="uo-row__title">' . esc_html__( 'Invite With Link', 'wbcom' ) . '</div></label>
-			<div class="uo_add_user_invite_url_block">
-				<input class="uo-input" type="url" id="wbcom_invite_url" value="' . esc_url( $invite_url ) . '" readonly />
-				<button class="uo-btn" type="button" onclick="copyInviteUrl()">Copy</button>
-			</div>
-			<span id="copyTooltip" style="visibility:hidden;">URL Copied!</span>
-		</div>';
-	}
+	
+		echo '<div class="uo-row" id="uo_add_user_invite_url" style="display:none;">';
+		echo '<label><div class="uo-row__title">' . esc_html__( 'Invite With Link', 'wbcom' ) . '</div></label>';
+		echo '<div class="uo_add_user_invite_url_block">';
+		echo '<input class="uo-input" type="url" id="wbcom_invite_url" value="' . esc_url( $invite_url ) . '" readonly />';
+		echo '<button class="uo-btn" type="button" onclick="copyInviteUrl()">' . esc_html__( 'Copy', 'wbcom' ) . '</button>';
+		echo '</div>';
+		echo '<span id="copyTooltip" style="visibility:hidden;">' . esc_html__( 'URL Copied!', 'wbcom' ) . '</span>';
+		echo '</div>';
+	}	
 }

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Freedomology
  * Plugin URI: https://wbcomdesigns.com
- * Description: A base skeleton plugin for custom development (LearnDash, GravityForms, BuddyBoss).
+ * Description: A base skeleton plugin for custom development (LearnDash, GravityForms, BuddyBoss, Elementor).
  * Version: 1.0.0
  * Author: Wbcom Designs
  * Author URI: https://wbcomdesigns.com
@@ -12,8 +12,9 @@
  * Domain Path: /languages
  */
 
+// Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit;
 }
 
 /**
@@ -31,7 +32,7 @@ foreach ( glob( FREEDOMOLOGY_PLUGIN_DIR . 'includes/*.php' ) as $file ) {
 }
 
 /**
- * Initialize all functionality
+ * Initialize Plugin Functionality
  */
 function freedomology_init_plugin() {
 	new Freedomology_Invite_Handler();
@@ -43,3 +44,15 @@ function freedomology_init_plugin() {
 	new Freedomology_UI_Hooks();
 }
 add_action( 'plugins_loaded', 'freedomology_init_plugin' );
+
+// Load LearnDash Group Invitation URL Core
+require_once FREEDOMOLOGY_PLUGIN_DIR . 'includes/learndash-group-invitation-url.php';
+
+/**
+ * Load Elementor Widgets If Elementor Is Active
+ */
+add_action( 'plugins_loaded', function() {
+	if ( defined( 'ELEMENTOR_VERSION' ) ) {
+		require_once FREEDOMOLOGY_PLUGIN_DIR . 'includes/elementor/elementor-widgets-loader.php';
+	}
+});
