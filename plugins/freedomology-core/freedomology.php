@@ -455,19 +455,22 @@ class Freedomology {
 
 
 	public function wbcom_style_invite_with_link() {
-		$group_management_page_id      = ulgm()->group_management->pages->get_group_management_page_id();
-		if( $group_management_page_id == get_the_ID() ) {
-			?>
-			<style type="text/css">
-				.uo_add_user_invite_url_block{
-					display: flex;
-					align-items: center;
-					justify-content: space-between;
-					gap: 10px;
-				}
-			</style>
-			<?php
-		}
+		if ( function_exists( 'ulgm' ) ) {
+			$group_management_page_id      = ulgm()->group_management->pages->get_group_management_page_id();
+			if( $group_management_page_id == get_the_ID() ) {
+				?>
+				<style type="text/css">
+					.uo_add_user_invite_url_block{
+						display: flex;
+						align-items: center;
+						justify-content: space-between;
+						gap: 10px;
+					}
+				</style>
+				<?php
+			}
+
+		}	
     	
     }	
 
