@@ -550,6 +550,55 @@ input.dt-button:hover:not(.disabled) {
 	display:none;
 }
 
+.not-access-content{
+	display:block
+}
+
+.f40-financial-sprint .not-access-content,
+.h40-health-sprint .not-access-content,
+.r40-relational-sprint .not-access-content{
+	display:none
+}
+
+#sprint-name-header,
+.r-40-section,
+.f-40-section,
+.h-40-section{
+	display:none
+}
+
+.f40-financial-sprint #sprint-name-header,
+.h40-health-sprint #sprint-name-header,
+.r40-relational-sprint #sprint-name-header{
+	display:flex;
+}
+
+.f40-financial-sprint .f-40-section,
+.h40-health-sprint .h-40-section,
+.r40-relational-sprint .r-40-section{
+	display:flex;
+}
+
+.logged-out .logout-form-sprint{
+	display:block;
+}
+
+.logged-in .logout-form-sprint{
+	display:none;
+}
+
+.logged-in .loggedin-form-sprint{
+	display:block;
+}
+
+.logged-out .loggedin-form-sprint{
+	display:none;
+}
+
+.gform-theme--framework .gform_validation_errors{
+	display:none;
+}
+
 .learndash-course-widget-wrap .lm-tab-course-info ul li.assignment, 
 .learndash-course-widget-wrap .lm-tab-course-info ul li.certificate, 
 .learndash-course-widget-wrap .lm-tab-course-info ul li.courses, 
@@ -665,7 +714,91 @@ body.user-enrolled .enrolled-section {
 	margin-top:5px;
 }
 
-.lm-course-switch-layout.switch-layout{
+.lm-course-switch-layout.switch-layout,
+.lm-course-top.switch-layout-container{
 	display:none !important;
 }
+
+
+.ld-focus .reign-sfwd-course-position-wrapper .reign-sfwd-pages,
+.ld-focus .reign-sfwd-course-position-wrapper{
+	display:none !important;
+}
+
+
+
+
+@media screen and (max-width: 960px) {
+	
+ .header-v3 #masthead .reign-navbar-user{
+	display:none;
+}
+	
+}
+
+
+@media screen and (max-width: 767px) {
+	
+	.wbcom-essential-dash__intro{
+		text-align:center;
+	}
+	
+	.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .sfwd-mark-complete, 
+	.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) #sfwd-mark-complete{
+		overflow:inherit;
+	}
+	
+	.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .sfwd-mark-complete::after, 
+	.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) #sfwd-mark-complete::after{
+		right: -1em;
+	}
+		
+}
+
+.reign-learndash-focus-modern .learndash-wrapper .ld-focus .ld-focus-sidebar .ld-progress .ld-progress-heading .ld-progress-stats .ld-progress-steps{
+	display:none !important;
+}
+
+.elementor-widget-presto_video .presto-block-video:not(.presto-sticky-parent){
+	border-radius:20px;
+}
+
+.elementor-widget-presto_video .skin-modern.presto-player__wrapper button.plyr__control.plyr__control--overlaid{
+	border-radius:15px !important;
+}
+
+.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions{
+	flex-direction: inherit;
+}
+
+@media screen and (max-width: 640px) {
+	
+	.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions{
+		flex-direction: inherit;
+		flex-wrap: wrap;
+	}
+	
+	.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions div:nth-child(1), 
+	.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions div:nth-child(3){
+		flex: 0 0 50%;
+		padding: 5px;
+	}
+	
+	.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions .ld-content-action a.ld-button{
+		color:#fff;
+	}
+	
+	.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions div:nth-child(2){
+		flex:0 0 100%;
+	}
+	
+	.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions div:nth-child(2) .ld-content-action .sfwd-mark-complete:after{
+		 right: 1em;
+	}
+	
+}
+
+
+
+
 
