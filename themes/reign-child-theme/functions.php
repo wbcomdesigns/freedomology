@@ -122,3 +122,100 @@ function add_enrolled_course_class($classes) {
     return $classes;
 }
 add_filter('body_class', 'add_enrolled_course_class');
+
+
+function add_custom_body_class_on_checkemail($classes) {
+    if (isset($_GET['checkemail']) && $_GET['checkemail'] === 'confirm') {
+        $classes[] = 'login-split-page';
+    }
+    return $classes;
+}
+add_filter('login_body_class', 'add_custom_body_class_on_checkemail');
+
+
+function redirect_logged_in_users_from_home() {
+    // Only do this for logged-in users
+    if ( is_user_logged_in() && is_front_page() ) {
+        // Change this to the actual URL or slug of your profile dashboard page
+        $dashboard_url = site_url('/profile-dashboard/');
+
+        // Perform the redirection
+        wp_redirect($dashboard_url);
+        exit;
+    }
+}
+add_action('template_redirect', 'redirect_logged_in_users_from_home');
+
+
+
+/* Single lesson on commnet or lesson tab on mobile view */
+add_action( 'learndash-focus-content-content-after', 'learndash_focus_content_lesson_content_after', 10, 2 );
+function learndash_focus_content_lesson_content_after( $course_id, $user_id ) {
+ 
+?>
+
+		<div class="ld-lesson-tabs-wrapper mobile-view-comment-lesson">
+
+			<!-- Tab Navigation -->
+			<ul class="ld-lesson-tabs-nav">
+				<li class="active" data-tab="comments-tab">Comments</li>
+				<li data-tab="lesson-tab">Lesson</li>
+			</ul>
+
+			<!-- Tab Content -->
+			<div class="ld-lesson-tabs-content">
+
+				<!-- Comments Tab -->
+				<div id="comments-tab" class="ld-tab-content active">
+						
+				<?php
+				learndash_get_template_part(
+						'focus/comments.php',
+						array(
+							'course_id' => $course_id,
+							'user_id'   => $user_id,
+							'context'   => 'focus',
+						),
+						true
+					);
+				?>
+
+			</div>
+
+			<!-- Lesson Tab -->
+			<div id="lesson-tab" class="ld-tab-content">
+				<?php
+					learndash_get_template_part(
+						'focus/sidebar.php',
+						array(
+							'course_id' => $course_id,
+							'user_id'   => $user_id,
+							'context'   => 'focus',
+						),
+						true
+					);
+				?>
+			</div>
+
+		</div>
+		</div>
+
+		<script>
+			document.addEventListener('DOMContentLoaded', function () {
+				const tabs = document.querySelectorAll('.ld-lesson-tabs-nav li');
+				const contents = document.querySelectorAll('.ld-tab-content');
+
+				tabs.forEach(tab => {
+					tab.addEventListener('click', function () {
+						tabs.forEach(t => t.classList.remove('active'));
+						contents.forEach(c => c.classList.remove('active'));
+
+						this.classList.add('active');
+						document.getElementById(this.dataset.tab).classList.add('active');
+					});
+				});
+			});
+			</script>
+
+<?php
+}

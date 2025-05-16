@@ -798,7 +798,242 @@ body.user-enrolled .enrolled-section {
 	
 }
 
+/* Focus mode */
+
+.learndash_post_sfwd-lessons .learndash-wrapper .ld-tabs .ld-tabs-content{
+	border:0px;
+	padding:0px;
+}
+
+.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions{
+	border-top:0px;
+}
+
+.ld-focus-main .ld-focus-header .ld-content-actions{
+	display: none !important;
+}
+
+.learndash-wrapper .ld-focus-comments #commentform .logged-in-as .required-field-message{
+	color:#2BD0CB;
+}
+
+.learndash-wrapper .ld-focus-comments .form-submit #submit{
+    color: #fff;
+    padding: 12px 30px;
+    font-size: 1em;
+    background: #2BD0CB !important;
+    font-weight: 600;
+}
+
+body .learndash-wrapper .ld-focus-comments .ld-expand-button.ld-button-alternate .ld-icon {
+    background-color: #00ddda !important;
+	color:#fff;
+}
+
+.fluid-width-video-wrapper iframe{
+	border-radius:15px;
+}
+
+.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-button:focus,
+.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .learndash_mark_complete_button:focus, 
+.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) #learndash_mark_complete_button:focus{
+	outline-offset: 0px;
+    outline: 0px;
+}
+
+.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions .ld-content-action:first-child{
+	flex-grow:1;
+}
+.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions .ld-content-action{
+	flex-basis: auto;
+}
+
+.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions .ld-content-action:first-child .ld-button {
+	justify-content:flex-start;
+	width:100%;
+	max-width:100%;
+}
+
+.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions .ld-content-action:nth-child(3n) .ld-text{
+	display:none;
+}
+
+.learndash-wrapper .learndash_mark_complete_button{
+    background: none !important;
+    border: 1px solid #2BD0CB !important;
+    color: #2BD0CB !important;
+    border-radius: 100px !important;
+	font-weight: 600 !important;
+	padding: 10px 25px 10px 50px !important;
+	transition:all 0.3s;
+}
+
+body .learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .sfwd-mark-complete::after {
+    left: 20px;
+    right: inherit;
+    color: #2bd0cb;
+    padding: 0 !important;
+}
+
+.learndash-wrapper .learndash_mark_complete_button:hover{
+	background: #2BD0CB !important;
+	color:#FFF !important;
+}
+
+
+body .learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .sfwd-mark-complete:hover:after{
+	color:#FFF !important;
+}
+
+@media screen and (max-width: 640px) {
+	
+	.learndash-wrapper .ld-focus .ld-focus-main .ld-focus-content h1{
+		font-size: 24px;
+        line-height: 28px;
+		margin: 0;
+	}
+	
+	.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions{
+		align-items:center;
+	}
+	
+	.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions .ld-content-action:first-child{
+		order: 2;
+        padding: 0;
+	}
+
+	.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions div:nth-child(2){
+		order: 1;
+        padding: 0;
+        margin-bottom: 20px;
+	}
+	
+	.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions div:nth-child(3){
+		order: 3;
+        flex: 0 0 50px;
+        padding: 0;
+	}
+	
+	.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions div:nth-child(3) .ld-button {
+		height:50px; 
+		border-radius:100px;
+	}
+	
+	.learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .ld-content-actions div:nth-child(3) .ld-button .ld-icon{
+		font-size: 1.875em;
+	}
+	
+	.learndash-wrapper .learndash_mark_complete_button{
+		text-align:center !important;
+	}
+	
+	body .learndash-wrapper:not(.ld-registration__outer-wrapper):not(.learndash-wrapper--modern) .sfwd-mark-complete::after{
+		left: calc(50% - 50px) !important;
+	}
+	
+}
 
 
 
+.mobile-view-comment-lesson{
+	display:none;
+}
+
+.ld-lesson-tabs-wrapper {
+    margin-top: 30px;
+}
+.ld-lesson-tabs-nav {
+    display: flex;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    gap: 10px;
+}
+.ld-lesson-tabs-nav li {
+    margin-right: 0;
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 2px solid #ABAAAA;
+    flex: 0 0 calc(50% - 10px);
+    text-align: center;
+	color:#ABAAAA;
+	font-size:14px;
+	font-weight: bold;
+}
+.ld-lesson-tabs-nav li.active {
+    border-bottom: 2px solid #363837;
+    color: #363837;
+}
+
+.ld-tab-content {
+    display: none;
+    padding: 20px 0;
+}
+.ld-tab-content.active {
+    display: block;
+}
+
+
+@media screen and (max-width: 640px) {
+
+	.mobile-view-comment-lesson{
+		display:block;
+	}
+	
+	.ld-focus-comments{
+		display:none;
+	}
+	.mobile-view-comment-lesson .ld-focus-comments{
+		display:block;
+	} 
+	
+	.mobile-view-comment-lesson .ld-focus-comments .comment-list{
+		padding: 0 !important;
+        list-style-type: none !important;
+	}
+	
+	.reign-learndash-focus-modern .learndash-wrapper .ld-focus .ld-lesson-tabs-wrapper.mobile-view-comment-lesson .ld-focus-sidebar{
+		 position: relative;
+		top: 0px;
+		transform: none;
+		width: 100%;
+		height: auto;
+		background: none;
+	}
+	
+	.learndash-wrapper .ld-lesson-tabs-wrapper.mobile-view-comment-lesson .ld-focus-comments #commentform .logged-in-as .required-field-message{
+		display:none;
+	}
+	.reign-learndash-focus-modern .learndash-wrapper .ld-focus .ld-lesson-tabs-wrapper.mobile-view-comment-lesson .ld-focus-sidebar .ld-course-navigation-list{
+		opacity:1;
+	}
+	
+	.learndash-wrapper .ld-focus-comments__header{
+		font-size: 20px;
+	}
+	.reign-learndash-focus-modern .learndash-wrapper .ld-focus .ld-lesson-tabs-wrapper.mobile-view-comment-lesson .ld-focus-comments #commentform .logged-in-as{
+		float:left;
+	}
+	
+	.learndash-wrapper .ld-focus-comments .form-submit #submit{
+		margin:0px;
+	}
+	.learndash-wrapper .ld-focus .ld-lesson-tabs-wrapper.mobile-view-comment-lesson .ld-course-navigation-heading .lms-topic-sidebar-course-navigation{
+		display:none;
+	}
+	
+	.learndash-wrapper .ld-lesson-tabs-wrapper.mobile-view-comment-lesson .ld-focus-sidebar .ld-course-navigation-heading{
+		width:100% !important;
+	}
+	
+	.learndash-wrapper .ld-breadcrumbs .ld-status{
+		width:auto;
+	}
+	
+	.learndash-wrapper .ld-focus-comments p.comment-form-comment{
+		clear:both;
+	}
+	
+}
 
