@@ -145,10 +145,8 @@ class Freedomology
 	/**
 	 * Create a Group Using Gravity Form via Uncanny LearnDash Groups Plugin
 	 */
-
 	public function ghl_learning_network_create_group_form_1($entry, $form)
 	{
-
 		$first_name   = rgar($entry, '1');
 		$last_name    = rgar($entry, '3');
 		$email        = rgar($entry, '4');
@@ -194,8 +192,19 @@ class Freedomology
 			$group_id = \uncanny_learndash_groups\ProcessManualGroup::process($args, $_POST);
 		}
 
-		// MOVED OUTSIDE: Save Sprint Start Date for GROUP LEADER (no override)
-		if (! empty($start_date) && ! empty($course_id) && ! empty($customer_id)) {
+		// Get the group leader ID that was created/found by ProcessManualGroup
+		$group_leader_id = null;
+		if (!empty($group_id)) {
+			// ProcessManualGroup creates/finds user by email, so get that user
+			$user = get_user_by('email', $email);
+			if ($user) {
+				$group_leader_id = $user->ID;
+				error_log("Freedomology: Group {$group_id} created. Group leader: {$group_leader_id} (email: {$email})");
+			}
+		}
+
+		// Save Sprint Start Date for GROUP LEADER (created by ProcessManualGroup)
+		if (! empty($start_date) && ! empty($course_id) && ! empty($group_leader_id)) {
 			$course_specific_meta_key = '';
 			switch ($course_id) {
 				case 6298: // R40 Relational Sprint
@@ -211,9 +220,9 @@ class Freedomology
 
 			// Save course-specific start date (only if not already set)
 			if (! empty($course_specific_meta_key)) {
-				$existing_date = get_user_meta($customer_id, $course_specific_meta_key, true);
+				$existing_date = get_user_meta($group_leader_id, $course_specific_meta_key, true);
 				if (empty($existing_date)) {
-					update_user_meta($customer_id, $course_specific_meta_key, sanitize_text_field($start_date));
+					update_user_meta($group_leader_id, $course_specific_meta_key, sanitize_text_field($start_date));
 
 					// Also save as global first start date for this course
 					$global_option = $course_specific_meta_key . '_global';
@@ -223,11 +232,13 @@ class Freedomology
 					}
 
 					// Debug log
-					error_log("Freedomology: Set {$course_specific_meta_key} = {$start_date} for user {$customer_id}");
+					error_log("Freedomology: Set {$course_specific_meta_key} = {$start_date} for group leader {$group_leader_id} (email: {$email})");
 				} else {
-					error_log("Freedomology: User {$customer_id} already has {$course_specific_meta_key} = {$existing_date}");
+					error_log("Freedomology: Group leader {$group_leader_id} already has {$course_specific_meta_key} = {$existing_date}");
 				}
 			}
+		} else {
+			error_log("Freedomology: Could not save start date. start_date: {$start_date}, course_id: {$course_id}, group_leader_id: {$group_leader_id}");
 		}
 
 		// Store start date and course as group meta for members who join later
