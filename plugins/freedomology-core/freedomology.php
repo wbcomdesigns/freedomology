@@ -203,6 +203,14 @@ class Freedomology
 			}
 		}
 
+		// NEW: Store leader info as group meta for easy retrieval later
+		if (! empty($email) && ! empty($group_id)) {
+			update_post_meta($group_id, '_group_leader_email', sanitize_email($email));
+			update_post_meta($group_id, '_group_leader_first_name', sanitize_text_field($first_name));
+			update_post_meta($group_id, '_group_leader_last_name', sanitize_text_field($last_name));
+			error_log("Freedomology: Stored leader email {$email} for group {$group_id}");
+		}
+
 		// Save Sprint Start Date for GROUP LEADER (created by ProcessManualGroup)
 		if (! empty($start_date) && ! empty($course_id) && ! empty($group_leader_id)) {
 			$course_specific_meta_key = '';
@@ -223,7 +231,7 @@ class Freedomology
 				$existing_date = get_user_meta($group_leader_id, $course_specific_meta_key, true);
 				if (empty($existing_date)) {
 					update_user_meta($group_leader_id, $course_specific_meta_key, sanitize_text_field($start_date));
-					
+
 					// Sync to WP Fusion immediately
 					if (function_exists('wp_fusion')) {
 						wp_fusion()->user->push_user_meta($group_leader_id);
@@ -521,7 +529,15 @@ class Freedomology
 			SharedFunctions::set_user_to_group($user_id, $group_id);
 		}
 
-		// ADD this code after the SharedFunctions::set_user_to_group line:
+		// NEW: Save group leader email (only if not already set)
+		$existing_leader_email = get_user_meta($user_id, 'sprintleader_email', true);
+		if (empty($existing_leader_email)) {
+			$group_leader_email = get_post_meta($group_id, '_group_leader_email', true);
+			if (!empty($group_leader_email)) {
+				update_user_meta($user_id, 'sprintleader_email', sanitize_email($group_leader_email));
+				error_log("Freedomology: Set sprintleader_email = {$group_leader_email} for new user {$user_id}");
+			}
+		}
 
 		// Save Sprint Start Date for GROUP MEMBER (new signup via invite)
 		$course_id = get_post_meta($group_id, '_sprint_course_id', true);
@@ -557,7 +573,7 @@ class Freedomology
 					$existing_date = get_user_meta($user_id, $course_specific_meta_key, true);
 					if (empty($existing_date)) {
 						update_user_meta($user_id, $course_specific_meta_key, sanitize_text_field($global_start_date));
-						
+
 						// Sync to WP Fusion immediately
 						if (function_exists('wp_fusion')) {
 							wp_fusion()->user->push_user_meta($user_id);
@@ -1134,7 +1150,15 @@ class Freedomology
 			SharedFunctions::set_user_to_group($user_id, $group_id);
 		}
 
-		// ADD this code after the SharedFunctions::set_user_to_group line:
+		// NEW: Save group leader email (only if not already set)
+		$existing_leader_email = get_user_meta($user_id, 'sprintleader_email', true);
+		if (empty($existing_leader_email)) {
+			$group_leader_email = get_post_meta($group_id, '_group_leader_email', true);
+			if (!empty($group_leader_email)) {
+				update_user_meta($user_id, 'sprintleader_email', sanitize_email($group_leader_email));
+				error_log("Freedomology: Set sprintleader_email = {$group_leader_email} for existing user {$user_id}");
+			}
+		}
 
 		// Save Sprint Start Date for GROUP MEMBER (existing user joining)
 		$course_id = get_post_meta($group_id, '_sprint_course_id', true);
@@ -1170,7 +1194,7 @@ class Freedomology
 					$existing_date = get_user_meta($user_id, $course_specific_meta_key, true);
 					if (empty($existing_date)) {
 						update_user_meta($user_id, $course_specific_meta_key, sanitize_text_field($global_start_date));
-						
+
 						// Sync to WP Fusion immediately
 						if (function_exists('wp_fusion')) {
 							wp_fusion()->user->push_user_meta($user_id);
