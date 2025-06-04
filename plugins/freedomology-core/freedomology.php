@@ -223,6 +223,11 @@ class Freedomology
 				$existing_date = get_user_meta($group_leader_id, $course_specific_meta_key, true);
 				if (empty($existing_date)) {
 					update_user_meta($group_leader_id, $course_specific_meta_key, sanitize_text_field($start_date));
+					
+					// Sync to WP Fusion immediately
+					if (function_exists('wp_fusion')) {
+						wp_fusion()->user->push_user_meta($group_leader_id);
+					}
 
 					// Also save as global first start date for this course
 					$global_option = $course_specific_meta_key . '_global';
@@ -552,6 +557,11 @@ class Freedomology
 					$existing_date = get_user_meta($user_id, $course_specific_meta_key, true);
 					if (empty($existing_date)) {
 						update_user_meta($user_id, $course_specific_meta_key, sanitize_text_field($global_start_date));
+						
+						// Sync to WP Fusion immediately
+						if (function_exists('wp_fusion')) {
+							wp_fusion()->user->push_user_meta($user_id);
+						}
 					}
 				}
 			}
@@ -1160,6 +1170,11 @@ class Freedomology
 					$existing_date = get_user_meta($user_id, $course_specific_meta_key, true);
 					if (empty($existing_date)) {
 						update_user_meta($user_id, $course_specific_meta_key, sanitize_text_field($global_start_date));
+						
+						// Sync to WP Fusion immediately
+						if (function_exists('wp_fusion')) {
+							wp_fusion()->user->push_user_meta($user_id);
+						}
 					}
 				}
 			}
