@@ -237,13 +237,6 @@ class Freedomology
 						wp_fusion()->user->push_user_meta($group_leader_id);
 					}
 
-					// Also save as global first start date for this course
-					$global_option = $course_specific_meta_key . '_global';
-					$global_start = get_option($global_option, '');
-					if (empty($global_start)) {
-						update_option($global_option, sanitize_text_field($start_date));
-					}
-
 					// Debug log
 					error_log("Freedomology: Set {$course_specific_meta_key} = {$start_date} for group leader {$group_leader_id} (email: {$email})");
 				} else {
@@ -565,20 +558,32 @@ class Freedomology
 			}
 
 			if (! empty($course_specific_meta_key)) {
-				// Get the FIRST start date for this course type
-				$global_start_date = get_option($course_specific_meta_key . '_global', '');
-
-				// Set user's start date to the global first start date (no override)
-				if (! empty($global_start_date)) {
+				// Get start date from group leader (not global option)
+				$group_leader_email = get_post_meta($group_id, '_group_leader_email', true);
+				$leader_start_date = '';
+				
+				if (!empty($group_leader_email)) {
+					$group_leader = get_user_by('email', $group_leader_email);
+					if ($group_leader) {
+						$leader_start_date = get_user_meta($group_leader->ID, $course_specific_meta_key, true);
+						error_log("Freedomology: Found group leader {$group_leader->ID} with start date: {$leader_start_date}");
+					}
+				}
+				
+				// Set user's start date to match their group leader's start date
+				if (! empty($leader_start_date)) {
 					$existing_date = get_user_meta($user_id, $course_specific_meta_key, true);
 					if (empty($existing_date)) {
-						update_user_meta($user_id, $course_specific_meta_key, sanitize_text_field($global_start_date));
+						update_user_meta($user_id, $course_specific_meta_key, sanitize_text_field($leader_start_date));
+						error_log("Freedomology: Set {$course_specific_meta_key} = {$leader_start_date} for new member {$user_id}");
 
 						// Sync to WP Fusion immediately
 						if (function_exists('wp_fusion')) {
 							wp_fusion()->user->push_user_meta($user_id);
 						}
 					}
+				} else {
+					error_log("Freedomology: Could not find group leader start date for course {$course_id}, group {$group_id}");
 				}
 			}
 		}
@@ -1186,20 +1191,32 @@ class Freedomology
 			}
 
 			if (! empty($course_specific_meta_key)) {
-				// Get the FIRST start date for this course type
-				$global_start_date = get_option($course_specific_meta_key . '_global', '');
-
-				// Set user's start date to the global first start date (no override)
-				if (! empty($global_start_date)) {
+				// Get start date from group leader (not global option)
+				$group_leader_email = get_post_meta($group_id, '_group_leader_email', true);
+				$leader_start_date = '';
+				
+				if (!empty($group_leader_email)) {
+					$group_leader = get_user_by('email', $group_leader_email);
+					if ($group_leader) {
+						$leader_start_date = get_user_meta($group_leader->ID, $course_specific_meta_key, true);
+						error_log("Freedomology: Found group leader {$group_leader->ID} with start date: {$leader_start_date}");
+					}
+				}
+				
+				// Set user's start date to match their group leader's start date
+				if (! empty($leader_start_date)) {
 					$existing_date = get_user_meta($user_id, $course_specific_meta_key, true);
 					if (empty($existing_date)) {
-						update_user_meta($user_id, $course_specific_meta_key, sanitize_text_field($global_start_date));
+						update_user_meta($user_id, $course_specific_meta_key, sanitize_text_field($leader_start_date));
+						error_log("Freedomology: Set {$course_specific_meta_key} = {$leader_start_date} for existing member {$user_id}");
 
 						// Sync to WP Fusion immediately
 						if (function_exists('wp_fusion')) {
 							wp_fusion()->user->push_user_meta($user_id);
 						}
 					}
+				} else {
+					error_log("Freedomology: Could not find group leader start date for course {$course_id}, group {$group_id}");
 				}
 			}
 		}
