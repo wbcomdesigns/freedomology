@@ -49,6 +49,7 @@ class Freedomology
 	{
 		include plugin_dir_path(__FILE__) . '/elements/learndash-group-invitation-url.php';
 		// Include files here when needed
+		include plugin_dir_path(__FILE__) . '/elements/wordpress-widget.php';
 	}
 
 	/**
