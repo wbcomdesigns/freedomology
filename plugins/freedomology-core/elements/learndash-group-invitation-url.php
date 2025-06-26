@@ -70,22 +70,12 @@ class LearnDash_Group_Invitation_URL {
     /**
      * Render invitation URLs with dropdown selection for groups.
      * 
-     * @param array $settings Settings array for customization
      * @return string HTML output with dropdown selection and copyable invitation link.
      */
-    public function render_invitation_url($settings = array()) {
+    public function render_invitation_url() {
         if (!is_user_logged_in()) {
             return '<p>' . esc_html__('You must be logged in to view invitation URLs.', 'ldgiu') . '</p>';
         }
-
-        // Set default settings if not provided
-        $default_settings = array(
-            'dropdown_label' => __('Select Group:', 'ldgiu'),
-            'copy_button_text' => __('Share Sprint Link', 'ldgiu'),
-            'copied_text' => __('Copied!', 'ldgiu')
-        );
-        
-        $settings = wp_parse_args($settings, $default_settings);
 
         $user_id = get_current_user_id();
         $user_groups = array();
@@ -117,14 +107,11 @@ class LearnDash_Group_Invitation_URL {
             $hash = wp_hash($group_id . get_option('site_secret_key', ''));
             $hash = substr($hash, 0, 12); // Shortened for URL friendliness
             
-            // Store group data with first course
-            $first_course_id = !empty($course_ids) ? $course_ids[0] : 0;
-            
+            // Store group data
             $group_data[$group_id] = array(
                 'name' => $group_name,
                 'code' => $hash,
                 'courses' => $course_ids,
-                'first_course' => $first_course_id
             );
         }
         
@@ -136,7 +123,7 @@ class LearnDash_Group_Invitation_URL {
         ?>
         <div class="ldgiu-invitation-container" id="<?php echo esc_attr($unique_id); ?>">
             <div class="ldgiu-group-selection">
-                <label for="<?php echo esc_attr($unique_id); ?>_group"><?php echo esc_html($settings['dropdown_label']); ?></label>
+                <label for="<?php echo esc_attr($unique_id); ?>_group"><?php echo esc_html__('Select Group:', 'ldgiu'); ?></label>
                 <select id="<?php echo esc_attr($unique_id); ?>_group" class="ldgiu-group-select">
                     <?php foreach ($group_data as $group_id => $data) : ?>
                         <option value="<?php echo esc_attr($group_id); ?>"><?php echo esc_html($data['name']); ?></option>
@@ -149,7 +136,7 @@ class LearnDash_Group_Invitation_URL {
                 <button id="<?php echo esc_attr($unique_id); ?>_copy" class="ldgiu-copy-button elementor-button elementor-button-link elementor-size-sm">
                     <span class="elementor-button-content-wrapper">
                         <span class="elementor-button-icon"><i aria-hidden="true" class="fas fa-copy"></i></span>
-                        <span class="elementor-button-text"><?php echo esc_html($settings['copy_button_text']); ?></span>
+                        <span class="elementor-button-text"><?php echo esc_html__('Share Sprint Link', 'ldgiu'); ?></span>
                     </span>
                 </button>
             </div>
@@ -233,7 +220,7 @@ class LearnDash_Group_Invitation_URL {
                 
                 // Visual feedback
                 const originalText = copyButton.querySelector(".elementor-button-text").textContent;
-                copyButton.querySelector(".elementor-button-text").textContent = "<?php echo esc_js($settings['copied_text']); ?>";
+                copyButton.querySelector(".elementor-button-text").textContent = "<?php echo esc_js(__('Copied!', 'ldgiu')); ?>";
                 
                 setTimeout(function() {
                     copyButton.querySelector(".elementor-button-text").textContent = originalText;
@@ -388,4 +375,3 @@ class LearnDash_Group_Invitation_URL {
 LearnDash_Group_Invitation_URL::get_instance();
 
 // Plugin is now ready to use
-?>

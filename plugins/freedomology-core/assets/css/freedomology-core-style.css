@@ -211,6 +211,20 @@
 }
 
 
+#reign-sidebar-left  .elementor-widget-ldgiu_invitation_url .ldgiu-invitation-url-container{
+	flex-wrap:wrap;
+}
+
+#reign-sidebar-left .elementor-widget-ldgiu_invitation_url .ldgiu-invitation-url-container .ldgiu-invitation-url,
+#reign-sidebar-left .elementor-widget-ldgiu_invitation_url .ldgiu-invitation-url-container .ldgiu-copy-button{
+	flex: 0 0 100%;
+}
+
+#reign-sidebar-left  .elementor-widget-ldgiu_invitation_url .ldgiu-invitation-url-container .elementor-button{
+	padding: 15px;
+	border-radius: 10px;
+}
+
 @media only screen and (max-width: 768px) {
   
 	.enrolled-course-wrapper .enrolled-course-accordion .course-card{
@@ -240,3 +254,11 @@
 .not-enrolled .not-enrolled-msg{
 	display:block !important;
 }
+
+#field_2_2 .gfield_label.gform-field-label .gfield_required {
+  display: none;
+}
+
+
+
+

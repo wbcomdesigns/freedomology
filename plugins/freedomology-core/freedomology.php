@@ -49,7 +49,11 @@ class Freedomology
 	{
 		include plugin_dir_path(__FILE__) . '/elements/learndash-group-invitation-url.php';
 		// Include files here when needed
+
 		include plugin_dir_path(__FILE__) . '/elements/wordpress-widget.php';
+
+		// Add the lesson unlock system
+		include plugin_dir_path(__FILE__) . '/elements/lesson-unlock-system.php';
 	}
 
 	/**
@@ -112,6 +116,9 @@ class Freedomology
 			10,
 			4
 		);
+
+		// Initialize the lesson unlock system
+		new FreedomologyLessonUnlockSystem();
 	}
 
 	/**
@@ -137,7 +144,7 @@ class Freedomology
 		if (! empty($request) && isset($request)) {
 			$redirect_to = $request;
 		} else {
-			$redirect_to = home_url('/profile-dashboard/');
+			$redirect_to = home_url('/news-feed/');
 		}
 
 		return $redirect_to;
@@ -562,7 +569,7 @@ class Freedomology
 				// Get start date from group leader (not global option)
 				$group_leader_email = get_post_meta($group_id, '_group_leader_email', true);
 				$leader_start_date = '';
-				
+
 				if (!empty($group_leader_email)) {
 					$group_leader = get_user_by('email', $group_leader_email);
 					if ($group_leader) {
@@ -570,7 +577,7 @@ class Freedomology
 						error_log("Freedomology: Found group leader {$group_leader->ID} with start date: {$leader_start_date}");
 					}
 				}
-				
+
 				// Set user's start date to match their group leader's start date
 				if (! empty($leader_start_date)) {
 					$existing_date = get_user_meta($user_id, $course_specific_meta_key, true);
@@ -802,7 +809,7 @@ class Freedomology
 			if (isset($_GET['group_id']) && isset($_GET['course_id'])) {
 				$classes[] = sanitize_title(get_the_title($_GET['course_id']));
 			}
-		} elseif (is_page('profile-dashboard') && is_user_logged_in()) {
+		} elseif (is_page('news-feed') && is_user_logged_in()) {
 			$user_id = get_current_user_id();
 			$course_ids = learndash_user_get_enrolled_courses($user_id);
 
@@ -1055,7 +1062,7 @@ class Freedomology
 		// Check if user is logged in and on homepage
 		if (is_user_logged_in() && is_front_page() && ! is_admin() && ! current_user_can('manage_options')) {
 			// Redirect to profile page (adjust the URL if needed)
-			wp_redirect(site_url('/profile-dashboard'));
+			wp_redirect(site_url('/news-feed/'));
 			exit;
 		}
 	}
@@ -1195,7 +1202,7 @@ class Freedomology
 				// Get start date from group leader (not global option)
 				$group_leader_email = get_post_meta($group_id, '_group_leader_email', true);
 				$leader_start_date = '';
-				
+
 				if (!empty($group_leader_email)) {
 					$group_leader = get_user_by('email', $group_leader_email);
 					if ($group_leader) {
@@ -1203,7 +1210,7 @@ class Freedomology
 						error_log("Freedomology: Found group leader {$group_leader->ID} with start date: {$leader_start_date}");
 					}
 				}
-				
+
 				// Set user's start date to match their group leader's start date
 				if (! empty($leader_start_date)) {
 					$existing_date = get_user_meta($user_id, $course_specific_meta_key, true);
