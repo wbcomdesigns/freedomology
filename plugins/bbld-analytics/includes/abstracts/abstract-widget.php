@@ -112,10 +112,33 @@ abstract class BBLD_Analytics_Abstract_Widget {
     }
     
     /**
-     * Get default configuration
+     * Get default configuration (Simplified)
      */
     protected function get_default_config() {
-        return array();
+        return array(
+            'period' => '30d',
+            'enabled' => true,
+            'refresh_interval' => 300
+        );
+    }
+    
+    /**
+     * Essential config validation only
+     */
+    protected function validate_config($config) {
+        $validated = array();
+        
+        // Only validate essential fields
+        $validated['period'] = isset($config['period']) && 
+            in_array($config['period'], array('7d', '30d', '90d', '1y')) ? 
+            $config['period'] : '30d';
+            
+        $validated['enabled'] = isset($config['enabled']) ? (bool)$config['enabled'] : true;
+        
+        $validated['refresh_interval'] = isset($config['refresh_interval']) ? 
+            max(60, min(3600, (int)$config['refresh_interval'])) : 300;
+        
+        return $validated;
     }
     
     /**

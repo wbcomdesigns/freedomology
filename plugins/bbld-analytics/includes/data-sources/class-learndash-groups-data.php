@@ -35,8 +35,8 @@ class BBLD_Analytics_LearnDash_Groups_Data extends BBLD_Analytics_Abstract_Data_
         $metrics = array();
         $today = current_time('Y-m-d');
         
-        // Get all groups
-        $groups = learndash_get_groups(true);
+        // Get all groups (CORRECTED)
+        $groups = BBLD_Analytics_Utils::get_learndash_groups();
         $total_groups = count($groups);
         
         // Store total groups count
@@ -100,16 +100,31 @@ class BBLD_Analytics_LearnDash_Groups_Data extends BBLD_Analytics_Abstract_Data_
     }
     
     /**
-     * Collect individual group metrics
+     * Collect individual group metrics (Updated with safe functions)
      */
     private function collect_group_metrics($group_id) {
         $metrics = array();
         
-        // Get group users
-        $group_users = learndash_get_groups_users($group_id);
+        // Use safe functions
+        $group_users = BBLD_Analytics_Utils::get_group_users($group_id);
         $enrollment_count = count($group_users);
         
         $metrics["group_{$group_id}_enrollment_count"] = $enrollment_count;
+        
+        if ($enrollment_count === 0) {
+            // Return zero metrics for empty groups
+            $metrics["group_{$group_id}_active_users"] = 0;
+            $metrics["group_{$group_id}_course_completions"] = 0;
+            $metrics["group_{$group_id}_engagement_score"] = 0;
+            
+            // Zero out course-specific completion rates
+            $shared_courses = bbld_analytics()->get_option('shared_courses', array());
+            foreach ($shared_courses as $course_id) {
+                $metrics["group_{$group_id}_course_{$course_id}_completion_rate"] = 0;
+            }
+            
+            return $metrics;
+        }
         
         // Get active users (users with activity in last 7 days)
         $active_users = $this->get_group_active_users($group_id, 7);
@@ -120,7 +135,7 @@ class BBLD_Analytics_LearnDash_Groups_Data extends BBLD_Analytics_Abstract_Data_
         $metrics["group_{$group_id}_course_completions"] = $course_completions;
         
         // Calculate engagement score (active users / total users * 100)
-        $engagement_score = $enrollment_count > 0 ? (count($active_users) / $enrollment_count) * 100 : 0;
+        $engagement_score = (count($active_users) / $enrollment_count) * 100;
         $metrics["group_{$group_id}_engagement_score"] = round($engagement_score, 2);
         
         // Get completion rates for shared courses
@@ -134,12 +149,12 @@ class BBLD_Analytics_LearnDash_Groups_Data extends BBLD_Analytics_Abstract_Data_
     }
     
     /**
-     * Get active users for a group
+     * Get active users for a group (Updated with safe functions)
      */
     private function get_group_active_users($group_id, $days = 7) {
         global $wpdb;
         
-        $group_users = learndash_get_groups_users($group_id);
+        $group_users = BBLD_Analytics_Utils::get_group_users($group_id);
         
         if (empty($group_users)) {
             return array();
@@ -149,6 +164,12 @@ class BBLD_Analytics_LearnDash_Groups_Data extends BBLD_Analytics_Abstract_Data_
         $placeholders = implode(',', array_fill(0, count($user_ids), '%d'));
         
         $activity_table = $wpdb->prefix . 'bbld_analytics_activity';
+        
+        // Check if activity table exists
+        if ($wpdb->get_var("SHOW TABLES LIKE '$activity_table'") !== $activity_table) {
+            return array(); // Return empty if no activity tracking
+        }
+        
         $since_date = date('Y-m-d H:i:s', strtotime("-{$days} days"));
         
         $query = "
@@ -165,12 +186,12 @@ class BBLD_Analytics_LearnDash_Groups_Data extends BBLD_Analytics_Abstract_Data_
     }
     
     /**
-     * Get course completions for a group
+     * Get course completions for a group (Updated with safe functions)
      */
     private function get_group_course_completions($group_id) {
         global $wpdb;
         
-        $group_users = learndash_get_groups_users($group_id);
+        $group_users = BBLD_Analytics_Utils::get_group_users($group_id);
         
         if (empty($group_users)) {
             return 0;
@@ -180,6 +201,12 @@ class BBLD_Analytics_LearnDash_Groups_Data extends BBLD_Analytics_Abstract_Data_
         $placeholders = implode(',', array_fill(0, count($user_ids), '%d'));
         
         $activity_table = $wpdb->prefix . 'bbld_analytics_activity';
+        
+        // Check if activity table exists
+        if ($wpdb->get_var("SHOW TABLES LIKE '$activity_table'") !== $activity_table) {
+            // Fallback: Check user meta for completions
+            return $this->get_group_completions_fallback($user_ids);
+        }
         
         $query = "
             SELECT COUNT(*) 
@@ -193,10 +220,30 @@ class BBLD_Analytics_LearnDash_Groups_Data extends BBLD_Analytics_Abstract_Data_
     }
     
     /**
-     * Get course completion rate for a group
+     * Fallback method for course completions
+     */
+    private function get_group_completions_fallback($user_ids) {
+        global $wpdb;
+        
+        if (empty($user_ids)) {
+            return 0;
+        }
+        
+        $placeholders = implode(',', array_fill(0, count($user_ids), '%d'));
+        
+        return (int)$wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->usermeta} 
+             WHERE user_id IN ($placeholders) 
+             AND meta_key LIKE 'course_completed_%'",
+            $user_ids
+        ));
+    }
+    
+    /**
+     * Get course completion rate for a group (CORRECTED)
      */
     private function get_group_course_completion_rate($group_id, $course_id) {
-        $group_users = learndash_get_groups_users($group_id);
+        $group_users = BBLD_Analytics_Utils::get_group_users($group_id);
         
         if (empty($group_users)) {
             return 0;
@@ -206,7 +253,7 @@ class BBLD_Analytics_LearnDash_Groups_Data extends BBLD_Analytics_Abstract_Data_
         $completed_users = 0;
         
         foreach ($group_users as $user_id) {
-            if (learndash_course_completed($user_id, $course_id)) {
+            if (BBLD_Analytics_Utils::is_course_completed($user_id, $course_id)) {
                 $completed_users++;
             }
         }
@@ -270,12 +317,12 @@ class BBLD_Analytics_LearnDash_Groups_Data extends BBLD_Analytics_Abstract_Data_
         $activity_table = $wpdb->prefix . 'bbld_analytics_activity';
         $today = current_time('Y-m-d');
         
-        // Get all group users
+        // Get all group users (CORRECTED)
         $all_group_users = array();
-        $groups = learndash_get_groups(true);
+        $groups = BBLD_Analytics_Utils::get_learndash_groups();
         
         foreach ($groups as $group) {
-            $group_users = learndash_get_groups_users($group->ID);
+            $group_users = BBLD_Analytics_Utils::get_group_users($group->ID);
             $all_group_users = array_merge($all_group_users, $group_users);
         }
         
@@ -385,7 +432,7 @@ class BBLD_Analytics_LearnDash_Groups_Data extends BBLD_Analytics_Abstract_Data_
         $metrics = array();
         
         // Update active learners count (changes frequently)
-        $groups = learndash_get_groups(true);
+        $groups = BBLD_Analytics_Utils::get_learndash_groups();
         $total_active_users = 0;
         
         foreach ($groups as $group) {

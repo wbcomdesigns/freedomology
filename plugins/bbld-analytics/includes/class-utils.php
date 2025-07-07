@@ -679,4 +679,113 @@ class BBLD_Analytics_Utils {
     public static function is_admin_request() {
         return is_admin() && !self::is_ajax_request();
     }
+    
+    /**
+     * Safe LearnDash function wrapper
+     */
+    public static function safe_learndash_function($function_name, $args = array(), $default = null) {
+        if (function_exists($function_name)) {
+            return call_user_func_array($function_name, $args);
+        }
+        return $default;
+    }
+    
+    /**
+     * Get LearnDash group leader safely (CORRECTED)
+     */
+    public static function get_group_leader_id($group_id) {
+        // Method 1: Check for multiple leaders
+        $leaders = get_post_meta($group_id, 'learndash_group_leaders', true);
+        if (is_array($leaders) && !empty($leaders)) {
+            return (int)$leaders[0]; // Return first leader
+        }
+        
+        // Method 2: Check for single leader
+        $leader = get_post_meta($group_id, 'learndash_group_leader', true);
+        if ($leader) {
+            return (int)$leader;
+        }
+        
+        // Method 3: Check alternative meta key
+        $leader = get_post_meta($group_id, '_ld_group_leader', true);
+        if ($leader) {
+            return (int)$leader;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Get LearnDash group users safely (CORRECTED)
+     */
+    public static function get_group_users($group_id) {
+        // Method 1: Try official function variations
+        if (function_exists('learndash_get_groups_user_ids')) {
+            return learndash_get_groups_user_ids($group_id);
+        }
+        
+        // Method 2: Check enrolled users meta
+        $enrolled_users = get_post_meta($group_id, 'learndash_group_enrolled_users', true);
+        if (is_array($enrolled_users)) {
+            return array_map('intval', $enrolled_users);
+        }
+        
+        // Method 3: Check alternative meta key
+        $enrolled_users = get_post_meta($group_id, '_ld_group_enrolled_users', true);
+        if (is_array($enrolled_users)) {
+            return array_map('intval', $enrolled_users);
+        }
+        
+        // Method 4: Direct database query
+        global $wpdb;
+        $user_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT user_id FROM {$wpdb->usermeta} 
+             WHERE meta_key LIKE %s",
+            'learndash_group_users_' . $group_id
+        ));
+        
+        return array_map('intval', $user_ids);
+    }
+    
+    /**
+     * Get LearnDash groups safely (CORRECTED)
+     */
+    public static function get_learndash_groups() {
+        return get_posts(array(
+            'post_type' => 'groups',
+            'post_status' => 'publish',
+            'numberposts' => -1,
+            'orderby' => 'title',
+            'order' => 'ASC'
+        ));
+    }
+    
+    /**
+     * Check course completion safely (CORRECTED)
+     */
+    public static function is_course_completed($user_id, $course_id) {
+        // Method 1: Use official function if exists
+        if (function_exists('learndash_course_completed')) {
+            return learndash_course_completed($user_id, $course_id);
+        }
+        
+        // Method 2: Check completion meta
+        $completed = get_user_meta($user_id, "course_completed_{$course_id}", true);
+        return !empty($completed);
+    }
+    
+    /**
+     * Get course enrolled users safely (CORRECTED)
+     */
+    public static function get_course_enrolled_users($course_id) {
+        global $wpdb;
+        
+        $user_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT user_id FROM {$wpdb->usermeta} 
+             WHERE meta_key = %s",
+            "course_{$course_id}_access_from"
+        ));
+        
+        return array_map('intval', $user_ids);
+    }
 }

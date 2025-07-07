@@ -264,14 +264,14 @@ class BBLD_Analytics_LearnDash_Data extends BBLD_Analytics_Abstract_Data_Source 
     }
     
     /**
-     * Get course enrolled users
+     * Get course enrolled users (CORRECTED)
      */
     private function get_course_enrolled_users($course_id) {
-        return learndash_get_users_for_course($course_id, array(), false);
+        return BBLD_Analytics_Utils::get_course_enrolled_users($course_id);
     }
     
     /**
-     * Get course completed users
+     * Get course completed users (CORRECTED)
      */
     private function get_course_completed_users($course_id) {
         global $wpdb;

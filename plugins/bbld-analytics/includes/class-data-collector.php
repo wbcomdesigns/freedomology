@@ -553,4 +553,45 @@ class BBLD_Analytics_Data_Collector {
         
         return $validation;
     }
+    
+    /**
+     * Error recovery for failed collections
+     */
+    public function recover_from_failed_collection() {
+        // Clear failed collection lock
+        delete_transient('bbld_analytics_refresh_lock');
+        
+        // Reset collection status
+        $this->database->store_metric('system', 'collection_status', 'recovered');
+        
+        // Try lightweight collection
+        try {
+            return $this->collect_essential_metrics_only();
+        } catch (Exception $e) {
+            error_log('BBLD Analytics: Recovery failed - ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Lightweight metrics collection for recovery
+     */
+    private function collect_essential_metrics_only() {
+        $metrics = array();
+        
+        // Only collect basic counts
+        if (class_exists('SFWD_LMS')) {
+            $metrics['total_courses'] = wp_count_posts('sfwd-courses')->publish;
+            $metrics['total_lessons'] = wp_count_posts('sfwd-lessons')->publish;
+        }
+        
+        $metrics['total_users'] = count_users()['total_users'];
+        $metrics['collection_time'] = current_time('mysql');
+        
+        foreach ($metrics as $key => $value) {
+            $this->database->store_metric('system', $key, $value);
+        }
+        
+        return $metrics;
+    }
 }

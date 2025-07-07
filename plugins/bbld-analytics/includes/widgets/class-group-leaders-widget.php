@@ -74,10 +74,12 @@ class BBLD_Analytics_Group_Leaders_Widget extends BBLD_Analytics_Abstract_Widget
     }
     
     /**
-     * Get group leaders data
+     * Get group leaders data (CORRECTED)
      */
     private function get_group_leaders_data() {
-        if (!function_exists('learndash_get_groups')) {
+        $groups = BBLD_Analytics_Utils::get_learndash_groups();
+        
+        if (empty($groups)) {
             return array(
                 'total_leaders' => 0,
                 'total_groups' => 0,
@@ -86,14 +88,13 @@ class BBLD_Analytics_Group_Leaders_Widget extends BBLD_Analytics_Abstract_Widget
             );
         }
         
-        $groups = learndash_get_groups(true);
         $leaders_data = array();
         $groups_without_leaders = array();
         
         foreach ($groups as $group) {
             $group_id = $group->ID;
-            $leader_id = learndash_get_group_leader_id($group_id);
-            $group_users = learndash_get_groups_users($group_id);
+            $leader_id = BBLD_Analytics_Utils::get_group_leader_id($group_id);
+            $group_users = BBLD_Analytics_Utils::get_group_users($group_id);
             
             // Get group performance metrics
             $engagement_metric = bbld_analytics()->database->get_metric('learndash_groups', "group_{$group_id}_engagement_score");

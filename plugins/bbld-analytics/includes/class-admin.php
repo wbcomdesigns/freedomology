@@ -464,22 +464,52 @@ class BBLD_Analytics_Admin {
     }
     
     /**
+     * Save widget settings
+     */
+    private function save_widget_settings() {
+        if (!isset($_POST['enabled_widgets']) || !is_array($_POST['enabled_widgets'])) {
+            return false;
+        }
+        
+        $enabled_widgets = array_map('sanitize_text_field', $_POST['enabled_widgets']);
+        $current_options = bbld_analytics()->get_options();
+        $current_options['enabled_widgets'] = $enabled_widgets;
+        
+        return bbld_analytics()->update_options($current_options);
+    }
+    
+    /**
+     * Check missing dependencies
+     */
+    public function check_missing_dependencies() {
+        $missing = array();
+        
+        if (!class_exists('SFWD_LMS')) {
+            $missing[] = 'LearnDash LMS';
+        }
+        
+        if (!empty($missing)) {
+            $message = sprintf(
+                __('BBLD Analytics requires: %s', 'bbld-analytics'),
+                implode(', ', $missing)
+            );
+            BBLD_Analytics_Utils::render_admin_notice($message, 'error');
+        }
+    }
+    
+    /**
      * Admin notices
      */
     public function admin_notices() {
+        // Check missing dependencies first
+        $this->check_missing_dependencies();
+        
         // Check if initial collection is done
         $initial_done = bbld_analytics()->get_option('initial_collection_done', false);
         
         if (!$initial_done && isset($_GET['page']) && strpos($_GET['page'], 'bbld-analytics') !== false) {
             echo '<div class="notice notice-info">';
             echo '<p>' . __('Initial data collection is in progress. Full analytics will be available shortly.', 'bbld-analytics') . '</p>';
-            echo '</div>';
-        }
-        
-        // Check for plugin dependencies
-        if (!class_exists('SFWD_LMS')) {
-            echo '<div class="notice notice-error">';
-            echo '<p>' . __('BuddyBoss LearnDash Analytics requires LearnDash LMS plugin to be installed and activated.', 'bbld-analytics') . '</p>';
             echo '</div>';
         }
     }

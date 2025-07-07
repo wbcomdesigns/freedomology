@@ -68,7 +68,20 @@ class BBLD_Analytics_BuddyBoss_Data extends BBLD_Analytics_Abstract_Data_Source 
     }
     
     /**
-     * Get total activity posts
+     * Get BuddyPress activity table name safely
+     */
+    private function get_activity_table() {
+        global $wpdb;
+        
+        if (function_exists('bp_core_get_table_prefix')) {
+            return bp_core_get_table_prefix() . 'bp_activity';
+        }
+        
+        return $wpdb->prefix . 'bp_activity';
+    }
+    
+    /**
+     * Get total activity posts (CORRECTED)
      */
     private function get_total_activity_posts() {
         global $wpdb;
@@ -77,8 +90,12 @@ class BBLD_Analytics_BuddyBoss_Data extends BBLD_Analytics_Abstract_Data_Source 
             return 0;
         }
         
-        $bp_prefix = bp_core_get_table_prefix();
-        $activity_table = $bp_prefix . 'bp_activity';
+        $activity_table = $this->get_activity_table();
+        
+        // Check if table exists
+        if ($wpdb->get_var("SHOW TABLES LIKE '$activity_table'") !== $activity_table) {
+            return 0;
+        }
         
         return (int)$wpdb->get_var(
             "SELECT COUNT(*) FROM {$activity_table} WHERE type = 'activity_update' AND hide_sitewide = 0"
@@ -86,16 +103,25 @@ class BBLD_Analytics_BuddyBoss_Data extends BBLD_Analytics_Abstract_Data_Source 
     }
     
     /**
-     * Get total activity favorites
+     * Get total activity favorites (CORRECTED)
      */
     private function get_total_activity_favorites() {
         global $wpdb;
         
-        if (!$this->is_available() || !function_exists('bp_activity_get_meta_table_name')) {
+        if (!$this->is_available()) {
             return 0;
         }
         
-        $meta_table = bp_activity_get_meta_table_name();
+        if (function_exists('bp_activity_get_meta_table_name')) {
+            $meta_table = bp_activity_get_meta_table_name();
+        } else {
+            $meta_table = $wpdb->prefix . 'bp_activity_meta';
+        }
+        
+        // Check if table exists
+        if ($wpdb->get_var("SHOW TABLES LIKE '$meta_table'") !== $meta_table) {
+            return 0;
+        }
         
         return (int)$wpdb->get_var(
             "SELECT COUNT(*) FROM {$meta_table} WHERE meta_key = 'favorite_count'"
@@ -103,7 +129,7 @@ class BBLD_Analytics_BuddyBoss_Data extends BBLD_Analytics_Abstract_Data_Source 
     }
     
     /**
-     * Get BuddyPress active users
+     * Get BuddyPress active users (CORRECTED)
      */
     private function get_bp_active_users($days = 30) {
         global $wpdb;
@@ -112,8 +138,13 @@ class BBLD_Analytics_BuddyBoss_Data extends BBLD_Analytics_Abstract_Data_Source 
             return array();
         }
         
-        $bp_prefix = bp_core_get_table_prefix();
-        $activity_table = $bp_prefix . 'bp_activity';
+        $activity_table = $this->get_activity_table();
+        
+        // Check if table exists
+        if ($wpdb->get_var("SHOW TABLES LIKE '$activity_table'") !== $activity_table) {
+            return array();
+        }
+        
         $since_date = date('Y-m-d H:i:s', strtotime("-{$days} days"));
         
         $user_ids = $wpdb->get_col($wpdb->prepare(
@@ -125,7 +156,7 @@ class BBLD_Analytics_BuddyBoss_Data extends BBLD_Analytics_Abstract_Data_Source 
     }
     
     /**
-     * Get daily activity posts
+     * Get daily activity posts (CORRECTED)
      */
     private function get_daily_activity_posts() {
         global $wpdb;
@@ -134,8 +165,13 @@ class BBLD_Analytics_BuddyBoss_Data extends BBLD_Analytics_Abstract_Data_Source 
             return 0;
         }
         
-        $bp_prefix = bp_core_get_table_prefix();
-        $activity_table = $bp_prefix . 'bp_activity';
+        $activity_table = $this->get_activity_table();
+        
+        // Check if table exists
+        if ($wpdb->get_var("SHOW TABLES LIKE '$activity_table'") !== $activity_table) {
+            return 0;
+        }
+        
         $today = current_time('Y-m-d');
         
         return (int)$wpdb->get_var($wpdb->prepare(

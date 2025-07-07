@@ -478,28 +478,36 @@ class BBLD_Analytics_Ajax {
      * Get group information
      */
     private function get_group_info($group_id) {
-        if (!function_exists('learndash_get_group')) {
+        $group = get_post($group_id);
+        
+        if (!$group || $group->post_type !== 'groups') {
             return null;
         }
         
-        $group = learndash_get_group($group_id);
-        
-        if (!$group) {
-            return null;
-        }
-        
-        $group_leader_id = learndash_get_group_leader_id($group_id);
-        $group_users = learndash_get_groups_users($group_id);
+        $leader_id = BBLD_Analytics_Utils::get_group_leader_id($group_id);
+        $group_users = BBLD_Analytics_Utils::get_group_users($group_id);
         
         return array(
             'id' => $group_id,
             'title' => $group->post_title,
             'description' => $group->post_excerpt,
-            'leader_id' => $group_leader_id,
-            'leader_name' => $group_leader_id ? get_user_by('ID', $group_leader_id)->display_name : __('No leader assigned', 'bbld-analytics'),
+            'leader_id' => $leader_id,
+            'leader_name' => $leader_id ? get_user_by('ID', $leader_id)->display_name : __('No leader', 'bbld-analytics'),
             'user_count' => count($group_users),
             'created_date' => $group->post_date
         );
+    }
+    
+    /**
+     * Error handling wrapper for AJAX
+     */
+    private function safe_ajax_response($callback, $error_message = null) {
+        try {
+            return call_user_func($callback);
+        } catch (Exception $e) {
+            $message = $error_message ?: __('An error occurred', 'bbld-analytics');
+            wp_send_json_error($message);
+        }
     }
     
     /**
