@@ -54,6 +54,9 @@ class Freedomology
 
 		// Add the lesson unlock system
 		include plugin_dir_path(__FILE__) . '/elements/lesson-unlock-system.php';
+		
+		// Add the invitation tracking system
+		include plugin_dir_path(__FILE__) . '/elements/invitation-tracking-system.php';
 	}
 
 	/**
@@ -367,8 +370,11 @@ class Freedomology
 	}
 	public function wbcom_add_invite_form_fields($group_id, $object)
 	{
-		// Generate permanent invite link
+		// Generate permanent invite link with tracking parameters
 		$invite_url = $this->generate_permanent_group_invite_link($group_id);
+		
+		// Apply tracking filter to add UTM parameters
+		$invite_url = apply_filters('freedomology_invitation_url', $invite_url, $group_id);
 
 ?>
 		<div class="uo-row" id="uo_add_user_invite_url" style="display: none;">
@@ -1032,7 +1038,7 @@ class Freedomology
 
 	public function wbcom_login_url_add_add_rewrite_rule()
 	{
-		add_rewrite_rule('^login/?$', 'wp-login.php', 'top');
+		add_rewrite_rule('^login/?, 'wp-login.php', 'top');
 	}
 
 	public function wbcom_login_filter_login_request($query_vars)
