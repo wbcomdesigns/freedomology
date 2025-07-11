@@ -73,6 +73,20 @@ function wbcom_get_group_member_ids()
         return ''; // Return empty for fallback to all activity
     }
 
+        if (!is_user_logged_in()) {
+        return '';
+    }
+
+    // SAFETY: Don't run in main BuddyBoss activity pages
+    if (function_exists('bp_is_activity_component') && bp_is_activity_component()) {
+        return ''; // Don't filter main activity feed
+    }
+
+    // SAFETY: Only run on LearnDash lesson pages
+    if (!is_singular(['sfwd-lessons', 'sfwd-topic'])) {
+        return '';
+    }
+
     $current_user_id = get_current_user_id();
 
     // Use the same function already used in your plugin's wbcom_filter_comments_for_same_group_users
