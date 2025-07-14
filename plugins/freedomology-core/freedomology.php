@@ -48,15 +48,12 @@ class Freedomology
 	private function includes()
 	{
 		include plugin_dir_path(__FILE__) . '/elements/learndash-group-invitation-url.php';
-		// Include files here when needed
-
 		include plugin_dir_path(__FILE__) . '/elements/wordpress-widget.php';
-
-		// Add the lesson unlock system
 		include plugin_dir_path(__FILE__) . '/elements/lesson-unlock-system.php';
-		
-		// Add the invitation tracking system
 		include plugin_dir_path(__FILE__) . '/elements/invitation-tracking-system.php';
+		
+		// Add general functions
+		include plugin_dir_path(__FILE__) . '/includes/functions.php';
 	}
 
 	/**
@@ -64,14 +61,13 @@ class Freedomology
 	 */
 	private function init_hooks()
 	{
-
 		add_action('init', [$this, 'initialize_plugin_features']);
 		add_action('wp_enqueue_scripts', [$this, 'wbcom_enqueue_assets']);
+		
 		if (class_exists('GFForms')) {
 			add_action('gform_after_submission_1', [$this, 'ghl_learning_network_create_group_form_1'], 10, 2);
 		}
 
-		//add_action( 'gform_entry_created', [ $this, 'wbcom_zapier_gform_entry_created'], 10, 2 );
 		add_action('gform_post_add_entry', [$this, 'wbcom_zapier_gform_entry_created'], 10, 2);
 		add_action('ld_added_group_access', [$this, 'ghl_learning_network_ld_added_group_access'], 10, 2);
 		add_action('ld_removed_group_access', [$this, 'ghl_learning_network_ld_removed_group_access'], 10, 2);
@@ -96,16 +92,13 @@ class Freedomology
 
 		add_action('learndash-content-tabs-content-after', array($this, 'wbcom_youtube_share_buttons_after_video'), 10, 4);
 		add_shortcode('dashboard_enrolled_course', array($this, 'wbcom_render_dashboard_enrolled_course'));
-		// add_action( 'elementor/query/user_enrolled_courses', array( $this, 'wbcom_dashboar_course_query_callback' ) );
 		add_action('bp_init', array($this, 'wbcom_render_buddyboss_social_login_on_login_popup'));
 		add_action('init', array($this, 'wbcom_login_url_add_add_rewrite_rule'));
 		add_filter('request', array($this, 'wbcom_login_filter_login_request'));
 		add_filter('site_url', array($this, 'wbcom_login_filter_site_url'), 10, 4);
 		add_action('template_redirect', array($this, 'wbcom_redirect_home_to_profile'), 10);
-		// add_action('template_redirect', array( $this, 'wbcom_ld_auto_redirect_to_first_lesson' ), 10 );
 		add_filter('login_redirect',  array($this, 'wbcom_buddyboss_custom_login_redirect'), 99999, 3);
 		add_action('gform_after_submission_4', array($this, 'wbcom_after_submission_signup_join_sprint'), 10, 2);
-		// add_action('wp_footer', array( $this, 'wbcom_ld_auto_redirect_js' ), 100 );
 
 		add_filter(
 			'gform_is_feed_asynchronous',
@@ -135,15 +128,19 @@ class Freedomology
 		// Add custom post types, taxonomies, or other initialization code here.
 	}
 
-
+	/**
+	 * Enqueue plugin assets
+	 */
 	public function wbcom_enqueue_assets()
 	{
 		wp_enqueue_style('freedomology-core', FREEDOMOLOGY_PLUGIN_URL . 'assets/css/freedomology-core-style.css', array(), time(), 'all');
 	}
 
+	/**
+	 * Custom login redirect
+	 */
 	public function wbcom_buddyboss_custom_login_redirect($redirect_to, $request, $user)
 	{
-
 		if (! empty($request) && isset($request)) {
 			$redirect_to = $request;
 		} else {
@@ -268,6 +265,9 @@ class Freedomology
 		}
 	}
 
+	/**
+	 * Clean username from email
+	 */
 	public function ghl_learning_network_pre_user_login($sanitized_user_login)
 	{
 		return strstr($sanitized_user_login, '@', true);
@@ -299,12 +299,17 @@ class Freedomology
 		}
 	}
 
+	/**
+	 * Handle new group creation
+	 */
 	function ghl_learning_network_uo_new_group_created($group_id, $group_leader_id)
 	{
 		$this->ghl_learning_network_added_leader_group_access($group_leader_id, $group_id);
 	}
 
-	// Replace your existing ghl_learning_network_added_leader_group_access function with this:
+	/**
+	 * Add leader group access with WP Fusion tags
+	 */
 	public function ghl_learning_network_added_leader_group_access($user_id, $group_id)
 	{
 		$group_course_ids = learndash_group_enrolled_courses($group_id);
@@ -337,7 +342,9 @@ class Freedomology
 		}
 	}
 
-	// Replace your existing ghl_learning_network_removed_leader_group_access function with this:
+	/**
+	 * Remove leader group access and WP Fusion tags
+	 */
 	public function ghl_learning_network_removed_leader_group_access($user_id, $group_id)
 	{
 		$group_course_ids = learndash_group_enrolled_courses($group_id);
@@ -368,6 +375,10 @@ class Freedomology
 			}
 		}
 	}
+
+	/**
+	 * Add invitation form fields with permanent links
+	 */
 	public function wbcom_add_invite_form_fields($group_id, $object)
 	{
 		// Generate permanent invite link with tracking parameters
@@ -391,7 +402,6 @@ class Freedomology
 		</div>
 		<?php
 	}
-
 
 	/**
 	 * Generate a permanent invite link for a LearnDash group
@@ -434,9 +444,11 @@ class Freedomology
 		return $invite_key === $expected_key;
 	}
 
+	/**
+	 * Validate email field with custom message for existing users
+	 */
 	public function wbcom_validate_email_field_add_custom_message($result, $value, $form, $field)
 	{
-
 		if ($result['is_valid'] && email_exists($value)) {
 			$result['is_valid'] = false;
 			$redirect_url = add_query_arg(
@@ -453,9 +465,11 @@ class Freedomology
 		return $result;
 	}
 
+	/**
+	 * Validate invitation code
+	 */
 	public function wbcom_validate_invitation_code($result, $value, $form, $field)
 	{
-
 		global $bp;
 
 		static $group_id = null;
@@ -505,11 +519,11 @@ class Freedomology
 		return $result;
 	}
 
-
-
+	/**
+	 * Cleanup user signup and assign to group
+	 */
 	public function wbcom_cleanup_user_signup($user_id, $feed, $entry, $user_pass)
 	{
-
 		$form = GFFormsModel::get_form_meta($entry['form_id']);
 		$meta = $feed['meta'];
 
@@ -612,49 +626,20 @@ class Freedomology
 		}
 	}
 
+	/**
+	 * Disable BuddyPress activation email
+	 */
 	function wbcom_disable_activation_email()
 	{
 		remove_action('bp_core_signup_send_validation_email', 'bp_core_signup_send_validation_email');
 	}
 
-
-	// Automatically activate user signups
-	public function wbcom_auto_activate_user($user_login)
-	{
-		global $wpdb;
-
-		// Get the signup entry using BP_Signup class
-		$signup_data = BP_Signup::get(
-			array(
-				'user_login' => $user_login,
-				'active'     => 0, // Only look for inactive users
-			)
-		);
-
-		// Check if the signup exists
-		if (! empty($signup_data['signups'])) {
-			$signup = $signup_data['signups'][0]; // Assuming the first result is correct
-
-			// Activate the signup using BuddyPress' activation method
-			$activation_result = BP_Signup::activate(array($signup->signup_id));
-
-			if (isset($activation_result['activated']) && ! empty($activation_result['activated'])) {
-				$activated_user = $activation_result['activated'][0];
-
-				// Log the successful activation
-				error_log('User successfully activated: ' . $activated_user->ID);
-			} else {
-				error_log('Error activating user: ' . $signup->user_login);
-			}
-		} else {
-			error_log('User signup not found or already activated: ' . $user_login);
-		}
-	}
-
-
+	/**
+	 * Add styles for invite form
+	 */
 	public function wbcom_style_invite_with_link()
 	{
-		$group_management_page_id      = ulgm()->group_management->pages->get_group_management_page_id();
+		$group_management_page_id = ulgm()->group_management->pages->get_group_management_page_id();
 		if ($group_management_page_id == get_the_ID()) {
 		?>
 			<style type="text/css">
@@ -669,10 +654,12 @@ class Freedomology
 		}
 	}
 
-
+	/**
+	 * Add scripts for invite form
+	 */
 	public function wbcom_scripts_invite_with_link()
 	{
-		$group_management_page_id      = ulgm()->group_management->pages->get_group_management_page_id();
+		$group_management_page_id = ulgm()->group_management->pages->get_group_management_page_id();
 		if ($group_management_page_id == get_the_ID()) {
 		?>
 			<script type="text/javascript">
@@ -706,6 +693,9 @@ class Freedomology
 		}
 	}
 
+	/**
+	 * Enable comments in LearnDash focus mode
+	 */
 	public function wbcom_learndash_enable_comments_focus_mode($status, $object)
 	{
 		if ('sfwd-lessons' === $object->post_type || 'sfwd-topic' === $object->post_type) {
@@ -714,7 +704,9 @@ class Freedomology
 		return $status;
 	}
 
-
+	/**
+	 * Filter comments to show only from same group users
+	 */
 	public function wbcom_filter_comments_for_same_group_users($comments, $post_id)
 	{
 		// Check if the user is logged in
@@ -761,8 +753,9 @@ class Freedomology
 		return $comments;
 	}
 
-
-
+	/**
+	 * Render signup course shortcode
+	 */
 	public function wbcom_render_signup_course()
 	{
 		// Get the course ID from the query parameter and sanitize it
@@ -798,6 +791,9 @@ class Freedomology
 		return $output;
 	}
 
+	/**
+	 * Render sprint name shortcode
+	 */
 	public function wbcom_render_sprint_name()
 	{
 		$group_id = isset($_GET['group_id']) ? sanitize_text_field($_GET['group_id']) : '';
@@ -808,7 +804,9 @@ class Freedomology
 		}
 	}
 
-
+	/**
+	 * Manage body classes based on user state
+	 */
 	public function wbcom_manage_body_classes($classes)
 	{
 		if (is_page('sign-up')) {
@@ -834,6 +832,9 @@ class Freedomology
 		return $classes;
 	}
 
+	/**
+	 * Trigger Zapier via form entry creation
+	 */
 	public function wbcom_zapier_gform_entry_created($entry, $form)
 	{
 		$form_id = 1; // Replace with your actual form ID		
@@ -842,6 +843,9 @@ class Freedomology
 		}
 	}
 
+	/**
+	 * Add YouTube share buttons after video content
+	 */
 	public	function wbcom_youtube_share_buttons_after_video($post_id, $context, $course_id, $user_id)
 	{
 		if (!in_array($context, ['lesson', 'topic'])) return;
@@ -874,8 +878,9 @@ class Freedomology
 	<?php
 	}
 
-	/* Course meta boxes */
-
+	/**
+	 * Add course meta boxes
+	 */
 	public function wbcom_add_sfwd_courses_meta_boxes()
 	{
 		add_meta_box(
@@ -888,6 +893,9 @@ class Freedomology
 		);
 	}
 
+	/**
+	 * Render course meta box
+	 */
 	public function render_sfwd_courses_meta_box($post)
 	{
 		$video_link = get_post_meta($post->ID, '_video_link', true);
@@ -899,10 +907,12 @@ class Freedomology
 			<label for="video_link">Video Link:</label>
 			<input type="url" name="video_link" id="video_link" value="<?php echo esc_url($video_link); ?>" class="widefat">
 		</p>
-
 	<?php
 	}
 
+	/**
+	 * Save course meta data
+	 */
 	public function wbcom_save_sfwd_courses_meta($post_id)
 	{
 		if (!isset($_POST['sfwd_courses_meta_nonce']) || !wp_verify_nonce($_POST['sfwd_courses_meta_nonce'], basename(__FILE__))) {
@@ -922,6 +932,9 @@ class Freedomology
 		}
 	}
 
+	/**
+	 * Render dashboard enrolled course shortcode
+	 */
 	public function wbcom_render_dashboard_enrolled_course()
 	{
 		ob_start(); // Start output buffering
@@ -1023,7 +1036,9 @@ class Freedomology
 		return ob_get_clean(); // Return buffered output
 	}
 
-
+	/**
+	 * Add BuddyBoss social login to login popup
+	 */
 	public function wbcom_render_buddyboss_social_login_on_login_popup()
 	{
 		add_action('reign_login_form_top', function () {
@@ -1036,11 +1051,17 @@ class Freedomology
 		}, 5);
 	}
 
+	/**
+	 * Add login URL rewrite rule
+	 */
 	public function wbcom_login_url_add_add_rewrite_rule()
 	{
-		add_rewrite_rule('^login/?, 'wp-login.php', 'top');
+		add_rewrite_rule('^login/?', 'wp-login.php', 'top');
 	}
 
+	/**
+	 * Filter login request
+	 */
 	public function wbcom_login_filter_login_request($query_vars)
 	{
 		if (isset($query_vars['pagename']) && $query_vars['pagename'] === 'login') {
@@ -1050,6 +1071,9 @@ class Freedomology
 		return $query_vars;
 	}
 
+	/**
+	 * Filter site URL for login pages
+	 */
 	public function wbcom_login_filter_site_url($url, $path, $scheme, $blog_id)
 	{
 		if ($path === 'wp-login.php' || strpos($path, 'wp-login.php') !== false) {
@@ -1063,6 +1087,9 @@ class Freedomology
 		return $url;
 	}
 
+	/**
+	 * Redirect home to profile for logged-in users
+	 */
 	public function wbcom_redirect_home_to_profile()
 	{
 		// Check if user is logged in and on homepage
@@ -1073,73 +1100,13 @@ class Freedomology
 		}
 	}
 
-	public function wbcom_ld_auto_redirect_to_first_lesson()
-	{
-		if (! is_user_logged_in() || is_admin()) {
-			return;
-		}
-
-		// Check if we are on a single LearnDash course page
-		if (is_singular('sfwd-courses')) {
-			global $post;
-
-			$course_id = $post->ID;
-
-
-			// Get the course steps (lessons, topics, etc.)
-			$course_steps = learndash_get_course_steps($course_id);
-
-			// If lessons exist, get the first lesson
-			if (! empty($course_steps) && is_array($course_steps)) {
-				$first_lesson_id = reset($course_steps);
-
-				// Optional: Check if user has access to the course
-				if (sfwd_lms_has_access($course_id, get_current_user_id())) {
-					// Redirect to the first lesson URL
-					wp_redirect(get_permalink($first_lesson_id));
-					exit;
-				}
-			}
-		}
-	}
-
-
-	public function wbcom_ld_auto_redirect_js()
-	{
-		if (!is_singular('sfwd-courses')) {
-			return;
-		}
-
-		$course_id = get_the_ID();
-		$user_id = get_current_user_id();
-		$user = wp_get_current_user();
-		$user_roles = (array) $user->roles;
-
-		if (is_user_logged_in() && (sfwd_lms_has_access($course_id, $user_id) || in_array('administrator', $user_roles))) {
-			$lesson_list = learndash_get_course_lessons_list($course_id);
-
-			if (!empty($lesson_list)) {
-				$first_lesson = reset($lesson_list);
-
-				if (isset($first_lesson['post']->ID)) {
-					$first_lesson_id = $first_lesson['post']->ID;
-					$first_lesson_url = get_permalink($first_lesson_id);
-		?>
-					<script type="text/javascript">
-						document.addEventListener('DOMContentLoaded', function() {
-							window.location.href = '<?php echo esc_url($first_lesson_url); ?>';
-						});
-					</script>
-<?php
-				}
-			}
-		}
-	}
-
+	/**
+	 * Handle existing user sprint signup
+	 */
 	public function wbcom_after_submission_signup_join_sprint($entry, $form)
 	{
 		$user_id  = get_current_user_id();
-		$group_id = rgar($entry, '6'); // Make sure field ID '2' is correct for Group ID
+		$group_id = rgar($entry, '6'); // Make sure field ID '6' is correct for Group ID
 
 		// Bail early if no user or group ID
 		if (empty($user_id) || empty($group_id)) {
