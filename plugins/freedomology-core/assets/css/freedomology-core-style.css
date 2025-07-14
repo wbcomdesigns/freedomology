@@ -260,5 +260,65 @@
 }
 
 
+/* Lesson Lock */
+
+.wbcom-lesson-locked-notice{
+	 background: #AEE0DE; 
+	border: 1px solid #AEE0DE; 
+	border-radius: 8px; 
+	padding: 25px; 
+	margin: 20px 0; 
+	text-align: center;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.lesson-lock-icon{
+	font-size: 48px; 
+	margin-bottom: 15px;
+}
+
+.lesson-lock-heading{
+	color: #856404; 
+	margin-bottom: 15px; 
+	font-size: 24px;
+}
+
+.lesson-lock-text{
+	color: #856404; 
+	margin-bottom: 15px; 
+	font-size: 16px;
+}
+
+.lesson-lock-message{
+	background: #fff; 
+	border: 2px solid #4BD7D3; 
+	border-radius: 6px; 
+	padding: 15px 30px; 
+	margin: 15px 0; 
+	display: inline-block;
+}
+
+.lesson-lock-date{
+	background: #4BD7D3;
+    color: white;
+    border-radius: 20px;
+    padding: 8px 16px;
+    display: flex;
+    margin-top: 10px;
+    align-items: center;
+    justify-content: center;
+}
+
+.lesson-lock-date-day{
+	font-size: 20px; 
+	font-weight: bold;
+}
+
+.lesson-lock-date-text{
+	font-size: 14px; 
+	margin-left: 5px;
+	text-transform:capitalize;
+}
+
 
 

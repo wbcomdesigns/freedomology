@@ -50,9 +50,6 @@ class FreedomologyLessonUnlockSystem
 
         // Enqueue navigation scripts
         add_action('wp_enqueue_scripts', array($this, 'wbcom_enqueue_navigation_scripts'));
-
-        // Debug action (uncomment to enable)
-        // add_action('wp_footer', array($this, 'wbcom_debug_lesson_access'));
     }
 
     /**
@@ -111,7 +108,30 @@ class FreedomologyLessonUnlockSystem
      */
     private function wbcom_get_group_leader_id($user_id)
     {
-        // Get user's groups
+        // First, check if the current user is a group leader themselves
+        $user_data = get_userdata($user_id);
+        if (!$user_data) {
+            return $user_id;
+        }
+        
+        $user_email = $user_data->user_email;
+        $sprintleader_email = get_user_meta($user_id, 'sprintleader_email', true);
+        
+        // If user has sprintleader_email meta and it matches their email, they are the leader
+        if (!empty($sprintleader_email) && $sprintleader_email === $user_email) {
+            return $user_id;
+        }
+        
+        // Alternative check: if user has any sprint start date meta, they might be a leader
+        $sprint_meta_keys = ['sprintr40_start', 'sprintf40_start', 'sprinth40_start'];
+        foreach ($sprint_meta_keys as $meta_key) {
+            $sprint_date = get_user_meta($user_id, $meta_key, true);
+            if (!empty($sprint_date)) {
+                return $user_id; // User has sprint dates, so they're likely a leader
+            }
+        }
+
+        // Get user's groups (original logic for group members)
         $user_groups = learndash_get_users_group_ids($user_id);
 
         if (!empty($user_groups)) {
@@ -157,11 +177,17 @@ class FreedomologyLessonUnlockSystem
         // Get the group leader's ID
         $group_leader_id = $this->wbcom_get_group_leader_id($user_id);
 
+        // Check if current user is the group leader - if so, bypass lock
+        if ($user_id == $group_leader_id) {
+            return true; // Group leaders have access to all lessons
+        }
+
         // Check the group leader's sprint start date
         $sprint_start_date = get_user_meta($group_leader_id, $meta_key, true);
 
+        // If no sprint start date is set, allow access (unlock all lessons)
         if (empty($sprint_start_date)) {
-            return false; // No start date set, don't allow access
+            return true; // No start date set, allow access
         }
 
         // Get lesson delay (default to 0 if not set)
@@ -258,6 +284,13 @@ class FreedomologyLessonUnlockSystem
             $group_leader_id = $this->wbcom_get_group_leader_id($user_id);
             $meta_key = $this->wbcom_get_course_meta_key($course_id);
             $sprint_start_date = get_user_meta($group_leader_id, $meta_key, true);
+            
+            // This should rarely happen now since empty sprint_start_date unlocks lessons
+            // But keeping the check for edge cases
+            if (empty($sprint_start_date)) {
+                return $content; // Should be unlocked, so show content
+            }
+            
             $lesson_delay = get_post_meta($post->ID, '_lesson_delay_days', true);
             $lesson_delay = !empty($lesson_delay) ? intval($lesson_delay) : 0;
 
@@ -270,18 +303,10 @@ class FreedomologyLessonUnlockSystem
             $days_remaining = max(0, ceil(($unlock_timestamp - $current_timestamp) / DAY_IN_SECONDS));
 
             $message = '
-            <div class="wbcom-lesson-locked-notice" style="
-                background: #AEE0DE; 
-                border: 1px solid #AEE0DE; 
-                border-radius: 8px; 
-                padding: 25px; 
-                margin: 20px 0; 
-                text-align: center;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            ">
-                <div style="font-size: 48px; margin-bottom: 15px;">🔒</div>
-                <h3 style="color: #856404; margin-bottom: 15px; font-size: 24px;">Lesson Locked</h3>
-                <p style="color: #856404; margin-bottom: 15px; font-size: 16px;">
+                <div class="wbcom-lesson-locked-notice">
+                <div class="lesson-lock-icon">🔒</div>
+                <h3 class="lesson-lock-heading">Lesson Locked</h3>
+                <p class="lesson-lock-text">
                     <strong>' . esc_html($lesson_title) . '</strong> from the <strong>' . esc_html($course_title) . '</strong> sprint
                 </p>';
 
@@ -295,16 +320,16 @@ class FreedomologyLessonUnlockSystem
             }
 
             $message .= '
-                <div style="background: #fff; border: 2px solid #4BD7D3; border-radius: 6px; padding: 15px; margin: 15px 0; display: inline-block;">
+                <div class="lesson-lock-message">
                     <p style="color: #856404; margin: 0 0 8px 0; font-size: 18px; font-weight: bold;">
                         🗓️ Unlocks: ' . esc_html($formatted_unlock_date) . '
                     </p>';
 
             if ($days_remaining > 0) {
                 $message .= '
-                    <div style="background: #4BD7D3; color: white; border-radius: 20px; padding: 8px 16px; display: inline-block; margin-top: 8px;">
-                        <span style="font-size: 20px; font-weight: bold;">' . $days_remaining . '</span>
-                        <span style="font-size: 12px; margin-left: 5px;">day' . ($days_remaining > 1 ? 's' : '') . ' remaining</span>
+                    <div class="lesson-lock-date">
+                        <span class="lesson-lock-date-day">' . $days_remaining . '</span>
+                        <span  class="lesson-lock-date-text">day' . ($days_remaining > 1 ? 's' : '') . ' remaining</span>
                     </div>';
             } else {
                 $message .= '
@@ -529,29 +554,6 @@ class FreedomologyLessonUnlockSystem
                 }
             ');
         }
-    }
-
-    /**
-     * Debug function for testing (uncomment action in init_hooks to enable)
-     */
-    public function wbcom_debug_lesson_access()
-    {
-        if (!is_user_logged_in() || !is_singular('sfwd-lessons')) return;
-
-        $user_id = get_current_user_id();
-        $lesson_id = get_the_ID();
-        $course_id = learndash_get_course_id($lesson_id);
-
-        $group_leader_id = $this->wbcom_get_group_leader_id($user_id);
-        $meta_key = $this->wbcom_get_course_meta_key($course_id);
-        $sprint_start = get_user_meta($group_leader_id, $meta_key, true);
-        $lesson_delay = get_post_meta($lesson_id, '_lesson_delay_days', true);
-        $is_unlocked = $this->wbcom_is_lesson_unlocked($user_id, $lesson_id);
-        $is_first_two = $this->wbcom_is_first_two_lessons($lesson_id, $course_id);
-
-        error_log("DEBUG Lesson Access: User {$user_id}, Lesson {$lesson_id}, Course {$course_id}");
-        error_log("Group Leader: {$group_leader_id}, Sprint Start: {$sprint_start}, Delay: {$lesson_delay}");
-        error_log("Unlocked: " . ($is_unlocked ? 'YES' : 'NO') . ", Is First Two: " . ($is_first_two ? 'YES' : 'NO'));
     }
 
     /**
