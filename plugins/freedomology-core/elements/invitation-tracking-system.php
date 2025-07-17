@@ -39,7 +39,7 @@ class FreedomologyInvitationTrackingSystem
         // Add tracking parameters to invitation URLs
         add_filter('freedomology_invitation_url', array($this, 'add_tracking_parameters'), 10, 2);
         
-        // Admin interface for viewing statistics
+        // Admin interface for viewing statistics - MOVED TO SETTINGS MENU
         add_action('admin_menu', array($this, 'add_admin_menu'));
         
         // AJAX handlers for admin statistics
@@ -331,17 +331,16 @@ class FreedomologyInvitationTrackingSystem
     }
 
     /**
-     * Add admin menu for viewing statistics
+     * Add admin menu under Settings
      */
     public function add_admin_menu()
     {
-        add_submenu_page(
-            'edit.php?post_type=groups',
-            'Invitation Tracking',
-            'Invitation Stats',
-            'manage_options',
-            'invitation-tracking',
-            array($this, 'admin_page')
+        add_options_page(
+            'Group Invitation Tracking Statistics',  // Page title
+            'Group Tracking',                        // Menu title
+            'manage_options',                        // Capability
+            'group-invitation-tracking',             // Menu slug
+            array($this, 'admin_page')              // Callback
         );
     }
 
@@ -350,6 +349,9 @@ class FreedomologyInvitationTrackingSystem
      */
     public function admin_page()
     {
+        // Ensure database table exists
+        $this->debug_database_status();
+        
         ?>
         <div class="wrap">
             <h1>Group Invitation Tracking Statistics</h1>
@@ -360,11 +362,22 @@ class FreedomologyInvitationTrackingSystem
                     <select id="group-select" class="regular-text">
                         <option value="">All Groups</option>
                         <?php
+                        // Get groups based on available post types
+                        $post_types = get_post_types();
+                        $group_post_type = 'groups'; // Default
+                        
+                        if (in_array('learndash-groups', $post_types)) {
+                            $group_post_type = 'learndash-groups';
+                        } elseif (in_array('groups', $post_types)) {
+                            $group_post_type = 'groups';
+                        }
+                        
                         $groups = get_posts(array(
-                            'post_type' => 'groups',
+                            'post_type' => $group_post_type,
                             'posts_per_page' => -1,
                             'post_status' => 'publish'
                         ));
+                        
                         foreach ($groups as $group) {
                             echo '<option value="' . $group->ID . '">' . esc_html($group->post_title) . '</option>';
                         }
@@ -490,22 +503,34 @@ class FreedomologyInvitationTrackingSystem
      */
     public function ajax_get_invitation_stats()
     {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'invitation_stats_nonce')) {
+            wp_send_json_error('Security check failed');
+            return;
+        }
+        
         if (!current_user_can('manage_options')) {
-            wp_die('Insufficient permissions');
+            wp_send_json_error('Insufficient permissions');
+            return;
         }
         
         $group_id = isset($_POST['group_id']) ? intval($_POST['group_id']) : 0;
         $days = isset($_POST['days']) ? intval($_POST['days']) : 30;
         
-        if (empty($group_id)) {
-            // Get stats for all groups
-            $stats = $this->get_all_groups_stats($days);
-        } else {
-            // Get stats for specific group
-            $stats = $this->get_group_invitation_stats($group_id, $days);
+        try {
+            if (empty($group_id)) {
+                // Get stats for all groups
+                $stats = $this->get_all_groups_stats($days);
+            } else {
+                // Get stats for specific group
+                $stats = $this->get_group_invitation_stats($group_id, $days);
+            }
+            
+            wp_send_json_success($stats);
+            
+        } catch (Exception $e) {
+            wp_send_json_error('Database error: ' . $e->getMessage());
         }
-        
-        wp_send_json_success($stats);
     }
 
     /**
@@ -559,11 +584,19 @@ class FreedomologyInvitationTrackingSystem
      */
     public function enqueue_admin_scripts($hook)
     {
-        if ($hook !== 'groups_page_invitation-tracking') {
+        // Check if we're on the invitation tracking settings page
+        if ($hook !== 'settings_page_group-invitation-tracking') {
             return;
         }
         
-        wp_enqueue_script('chart-js', 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js', array(), '3.9.1', true);
+        wp_enqueue_script('chart-js', 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js', array('jquery'), '3.9.1', true);
+        
+        // Localize script with proper AJAX data
+        wp_localize_script('chart-js', 'invitationAjax', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('invitation_stats_nonce'),
+            'action' => 'get_invitation_stats'
+        ));
         
         wp_add_inline_script('chart-js', '
         jQuery(document).ready(function($) {
@@ -573,51 +606,76 @@ class FreedomologyInvitationTrackingSystem
                 const groupId = $("#group-select").val();
                 const days = $("#date-range").val();
                 
-                $.post(ajaxurl, {
-                    action: "get_invitation_stats",
-                    group_id: groupId,
-                    days: days
-                }, function(response) {
-                    if (response.success) {
-                        updateStatsDisplay(response.data);
+                $.ajax({
+                    url: invitationAjax.ajax_url,
+                    type: "POST",
+                    data: {
+                        action: invitationAjax.action,
+                        group_id: groupId,
+                        days: days,
+                        nonce: invitationAjax.nonce
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            updateStatsDisplay(response.data);
+                        } else {
+                            showError("Error loading statistics: " + (response.data || "Unknown error"));
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        showError("Failed to load statistics. Please try again.");
                     }
                 });
             }
             
+            function showError(message) {
+                $("#total-clicks").text("Error");
+                $("#total-conversions").text("Error");
+                $("#conversion-rate").text("Error");
+                $("#daily-stats-body").html("<tr><td colspan=\"4\" style=\"color:red;\">" + message + "</td></tr>");
+            }
+            
             function updateStatsDisplay(data) {
-                $("#total-clicks").text(data.total_clicks);
-                $("#total-conversions").text(data.total_conversions);
-                $("#conversion-rate").text(data.conversion_rate + "%");
+                $("#total-clicks").text(data.total_clicks || 0);
+                $("#total-conversions").text(data.total_conversions || 0);
+                $("#conversion-rate").text((data.conversion_rate || 0) + "%");
                 
                 // Update daily stats table
                 let tableHtml = "";
-                data.daily_stats.forEach(function(day) {
-                    const rate = day.clicks > 0 ? Math.round((day.conversions / day.clicks) * 100) : 0;
-                    tableHtml += `<tr>
-                        <td>${day.date}</td>
-                        <td>${day.clicks}</td>
-                        <td>${day.conversions}</td>
-                        <td>${rate}%</td>
-                    </tr>`;
-                });
-                $("#daily-stats-body").html(tableHtml || "<tr><td colspan=\"4\">No data available</td></tr>");
+                if (data.daily_stats && data.daily_stats.length > 0) {
+                    data.daily_stats.forEach(function(day) {
+                        const rate = day.clicks > 0 ? Math.round((day.conversions / day.clicks) * 100) : 0;
+                        tableHtml += `<tr>
+                            <td>${day.date}</td>
+                            <td>${day.clicks}</td>
+                            <td>${day.conversions}</td>
+                            <td>${rate}%</td>
+                        </tr>`;
+                    });
+                } else {
+                    tableHtml = "<tr><td colspan=\"4\">No data available for selected period</td></tr>";
+                }
+                $("#daily-stats-body").html(tableHtml);
                 
                 // Update chart
-                updateChart(data.daily_stats);
+                updateChart(data.daily_stats || []);
             }
             
             function updateChart(dailyStats) {
-                const ctx = document.getElementById("invitation-chart").getContext("2d");
+                const ctx = document.getElementById("invitation-chart");
+                if (!ctx) return;
+                
+                const chartCtx = ctx.getContext("2d");
                 
                 const labels = dailyStats.map(day => day.date).reverse();
-                const clicksData = dailyStats.map(day => parseInt(day.clicks)).reverse();
-                const conversionsData = dailyStats.map(day => parseInt(day.conversions)).reverse();
+                const clicksData = dailyStats.map(day => parseInt(day.clicks) || 0).reverse();
+                const conversionsData = dailyStats.map(day => parseInt(day.conversions) || 0).reverse();
                 
                 if (invitationChart) {
                     invitationChart.destroy();
                 }
                 
-                invitationChart = new Chart(ctx, {
+                invitationChart = new Chart(chartCtx, {
                     type: "line",
                     data: {
                         labels: labels,
@@ -646,9 +704,12 @@ class FreedomologyInvitationTrackingSystem
                 });
             }
             
-            $("#load-stats").click(loadStats);
+            $("#load-stats").click(function(e) {
+                e.preventDefault();
+                loadStats();
+            });
             
-            // Load initial stats
+            // Auto-load stats on page load
             loadStats();
         });
         ');
@@ -659,14 +720,30 @@ class FreedomologyInvitationTrackingSystem
      */
     public function add_group_stats_meta_box()
     {
-        add_meta_box(
-            'group-invitation-stats',
-            'Invitation Statistics',
-            array($this, 'render_group_stats_meta_box'),
-            'groups',
-            'side',
-            'high'
-        );
+        // Try to add to different possible group post types
+        $post_types = get_post_types();
+        
+        if (in_array('learndash-groups', $post_types)) {
+            add_meta_box(
+                'group-invitation-stats',
+                'Invitation Statistics',
+                array($this, 'render_group_stats_meta_box'),
+                'learndash-groups',
+                'side',
+                'high'
+            );
+        }
+        
+        if (in_array('groups', $post_types)) {
+            add_meta_box(
+                'group-invitation-stats',
+                'Invitation Statistics',
+                array($this, 'render_group_stats_meta_box'),
+                'groups',
+                'side',
+                'high'
+            );
+        }
     }
 
     /**
@@ -682,7 +759,7 @@ class FreedomologyInvitationTrackingSystem
             <p>Conversions: <strong><?php echo $stats['total_conversions']; ?></strong></p>
             <p>Rate: <strong><?php echo $stats['conversion_rate']; ?>%</strong></p>
             
-            <p><a href="<?php echo admin_url('edit.php?post_type=groups&page=invitation-tracking&group=' . $post->ID); ?>" class="button">View Detailed Stats</a></p>
+            <p><a href="<?php echo admin_url('options-general.php?page=group-invitation-tracking&group=' . $post->ID); ?>" class="button">View Detailed Stats</a></p>
         </div>
         <?php
     }
@@ -709,6 +786,24 @@ class FreedomologyInvitationTrackingSystem
             </div>
         </div>
         <?php
+    }
+
+    /**
+     * Debug database status (needed for functionality)
+     */
+    private function debug_database_status()
+    {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'freedomology_invitation_tracking';
+        
+        // Check if table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name;
+        
+        if (!$table_exists) {
+            return false;
+        }
+        
+        return true;
     }
 }
 
