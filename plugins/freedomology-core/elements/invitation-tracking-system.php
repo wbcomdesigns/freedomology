@@ -1,11 +1,12 @@
 <?php
 /**
- * Group Invitation Link Tracking System
+ * Simplified Group Invitation Link Tracking System
  * 
- * This file should be placed in: plugins/freedomology-core/elements/invitation-tracking-system.php
+ * This file should replace: plugins/freedomology-core/elements/invitation-tracking-system.php
  * 
  * Tracks impressions (clicks) and conversions (successful signups) for group invitation links
- * Uses AJAX-based tracking for reliability and database-only analytics
+ * Uses server-side tracking only - NO AJAX
+ * Allows all entries with timestamp-only keys for duplicate prevention
  */
 
 if (!defined('ABSPATH')) {
@@ -28,14 +29,7 @@ class FreedomologyInvitationTrackingSystem
      */
     private function init_hooks()
     {
-        // AJAX click tracking (primary method)
-        add_action('wp_ajax_track_invitation_click', array($this, 'ajax_track_invitation_click'));
-        add_action('wp_ajax_nopriv_track_invitation_click', array($this, 'ajax_track_invitation_click'));
-        
-        // Enqueue tracking script on sign-up page
-        add_action('wp_enqueue_scripts', array($this, 'enqueue_tracking_script'));
-        
-        // Backup tracking method (if JavaScript is disabled)
+        // Server-side tracking only (no AJAX)
         add_action('template_redirect', array($this, 'track_invitation_click'), 1);
         
         // Track conversions when user successfully signs up
@@ -44,13 +38,13 @@ class FreedomologyInvitationTrackingSystem
         // Track conversions for existing users joining sprints (Form 4)
         add_action('gform_after_submission_4', array($this, 'track_existing_user_conversion'), 20, 2);
         
-        // Add tracking parameters to invitation URLs (disabled for clean URLs)
+        // Add tracking parameters to invitation URLs
         add_filter('freedomology_invitation_url', array($this, 'add_tracking_parameters'), 10, 2);
         
         // Admin interface for viewing statistics - Settings Menu
         add_action('admin_menu', array($this, 'add_admin_menu'));
         
-        // AJAX handlers for admin statistics
+        // AJAX handlers for admin statistics only
         add_action('wp_ajax_get_invitation_stats', array($this, 'ajax_get_invitation_stats'));
         
         // Enqueue admin scripts
@@ -94,99 +88,40 @@ class FreedomologyInvitationTrackingSystem
             KEY course_id (course_id),
             KEY invitation_code (invitation_code),
             KEY converted (converted),
-            KEY click_timestamp (click_timestamp)
+            KEY click_timestamp (click_timestamp),
+            KEY ip_date_lookup (ip_address, click_timestamp)
         ) $charset_collate;";
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
         
         // Update table version option
-        update_option('freedomology_tracking_db_version', '1.0');
+        update_option('freedomology_tracking_db_version', '2.0');
     }
 
     /**
-     * Enqueue tracking script on sign-up page
+     * Track invitation link clicks (primary tracking method)
      */
-    public function enqueue_tracking_script()
+    public function track_invitation_click()
     {
-        // Check for invitation parameters (more reliable than page slug)
+        // Only track if we have invitation parameters
         if (empty($_GET['group_id']) || empty($_GET['code'])) {
             return;
         }
         
-        // Also check if we're on any of these possible page slugs
-        $valid_pages = array('sign-up', 'signup', 'register', 'registration', 'join');
-        $current_page_slug = get_post_field('post_name', get_queried_object_id());
-        
-        if (!in_array($current_page_slug, $valid_pages)) {
-            // For debugging: let's see what page we're actually on
-            error_log("Freedomology Debug: Current page slug is '{$current_page_slug}', not in valid pages: " . implode(', ', $valid_pages));
-            return;
-        }
-        
-        wp_enqueue_script('jquery');
-        
-        // Localize script with tracking data
-        wp_localize_script('jquery', 'invitationTracking', array(
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('track_invitation_click'),
-            'group_id' => intval($_GET['group_id']),
-            'course_id' => isset($_GET['course_id']) ? intval($_GET['course_id']) : 0,
-            'code' => sanitize_text_field($_GET['code'])
-        ));
-        
-        // Add inline script to track click immediately
-        wp_add_inline_script('jquery', '
-        jQuery(document).ready(function($) {
-            console.log("Invitation tracking script loaded");
-            console.log("Tracking data:", invitationTracking);
-            
-            // Track invitation click via AJAX
-            $.post(invitationTracking.ajax_url, {
-                action: "track_invitation_click",
-                group_id: invitationTracking.group_id,
-                course_id: invitationTracking.course_id,
-                code: invitationTracking.code,
-                nonce: invitationTracking.nonce
-            }, function(response) {
-                if (response.success) {
-                    console.log("✅ Invitation click tracked successfully:", response.data);
-                } else {
-                    console.log("❌ Invitation tracking failed:", response.data);
-                }
-            }).fail(function(xhr, status, error) {
-                console.log("❌ Invitation tracking AJAX failed:", status, error);
-                console.log("Response text:", xhr.responseText);
-            });
-        });
-        ');
-    }
-
-    /**
-     * AJAX handler for tracking invitation clicks
-     */
-    public function ajax_track_invitation_click()
-    {
-        // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'track_invitation_click')) {
-            wp_send_json_error('Security check failed');
-            return;
-        }
-        
-        $group_id = isset($_POST['group_id']) ? intval($_POST['group_id']) : 0;
-        $course_id = isset($_POST['course_id']) ? intval($_POST['course_id']) : 0;
-        $code = isset($_POST['code']) ? sanitize_text_field($_POST['code']) : '';
+        $group_id = intval($_GET['group_id']);
+        $course_id = isset($_GET['course_id']) ? intval($_GET['course_id']) : 0;
+        $code = sanitize_text_field($_GET['code']);
         
         if (empty($group_id) || empty($code)) {
-            wp_send_json_error('Missing required parameters');
             return;
         }
         
         // Get user information
         $user_ip = $this->get_user_ip();
         $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
+        $referrer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
         
-        // Check for duplicate clicks from same IP today
         global $wpdb;
         $table_name = $wpdb->prefix . 'freedomology_invitation_tracking';
         
@@ -196,31 +131,12 @@ class FreedomologyInvitationTrackingSystem
             $this->create_tracking_tables();
         }
         
-        $existing_click = $wpdb->get_var($wpdb->prepare(
-            "SELECT id FROM $table_name 
-            WHERE group_id = %d 
-            AND invitation_code = %s 
-            AND ip_address = %s 
-            AND DATE(click_timestamp) = CURDATE()
-            LIMIT 1",
-            $group_id, $code, $user_ip
-        ));
-        
-        if ($existing_click) {
-            // Already tracked today from this IP for this group
-            wp_send_json_success(array(
-                'message' => 'Already tracked today',
-                'tracking_id' => $existing_click
-            ));
-            return;
-        }
-        
         // Create synthetic UTM data for analytics
         $utm_source = 'group_invitation';
         $utm_medium = 'link_share';
         $utm_campaign = 'group_' . $group_id;
         
-        // Insert tracking record
+        // Always insert new tracking record (no duplicate prevention at insert time)
         $result = $wpdb->insert(
             $table_name,
             array(
@@ -229,7 +145,7 @@ class FreedomologyInvitationTrackingSystem
                 'invitation_code' => $code,
                 'ip_address' => $user_ip,
                 'user_agent' => $user_agent,
-                'referrer' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '',
+                'referrer' => $referrer,
                 'utm_source' => $utm_source,
                 'utm_medium' => $utm_medium,
                 'utm_campaign' => $utm_campaign,
@@ -251,72 +167,11 @@ class FreedomologyInvitationTrackingSystem
             // Also store in a cookie as backup
             setcookie('invitation_tracking_id', $tracking_id, time() + 3600, '/');
             
-            wp_send_json_success(array(
-                'message' => 'Click tracked successfully',
-                'tracking_id' => $tracking_id,
-                'group_id' => $group_id,
-                'ip' => $user_ip
-            ));
+            // Log successful tracking
+            error_log("Freedomology: Tracked click - ID: {$tracking_id}, Group: {$group_id}, IP: {$user_ip}");
         } else {
-            wp_send_json_error('Database insert failed: ' . $wpdb->last_error);
+            error_log("Freedomology: Failed to track click - " . $wpdb->last_error);
         }
-    }
-
-    /**
-     * Track invitation link clicks (backup method for JavaScript disabled)
-     */
-    public function track_invitation_click()
-    {
-        // Only track on sign-up page with invitation parameters
-        if (!is_page('sign-up')) {
-            return;
-        }
-        
-        $group_id = isset($_GET['group_id']) ? intval($_GET['group_id']) : 0;
-        $course_id = isset($_GET['course_id']) ? intval($_GET['course_id']) : 0;
-        $code = isset($_GET['code']) ? sanitize_text_field($_GET['code']) : '';
-        
-        if (empty($group_id) || empty($code)) {
-            return;
-        }
-        
-        // Use same logic as AJAX handler but simplified
-        $user_ip = $this->get_user_ip();
-        
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'freedomology_invitation_tracking';
-        
-        // Check for existing click today
-        $existing_click = $wpdb->get_var($wpdb->prepare(
-            "SELECT id FROM $table_name 
-            WHERE group_id = %d 
-            AND invitation_code = %s 
-            AND ip_address = %s 
-            AND DATE(click_timestamp) = CURDATE()
-            LIMIT 1",
-            $group_id, $code, $user_ip
-        ));
-        
-        if ($existing_click) {
-            return; // Already tracked
-        }
-        
-        // Insert tracking record (simplified version)
-        $wpdb->insert(
-            $table_name,
-            array(
-                'group_id' => $group_id,
-                'course_id' => $course_id,
-                'invitation_code' => $code,
-                'ip_address' => $user_ip,
-                'user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '',
-                'referrer' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '',
-                'utm_source' => 'group_invitation',
-                'utm_medium' => 'link_share',
-                'utm_campaign' => 'group_' . $group_id,
-            ),
-            array('%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
-        );
     }
 
     /**
@@ -339,6 +194,7 @@ class FreedomologyInvitationTrackingSystem
         }
         
         if (empty($tracking_id)) {
+            error_log("Freedomology: No tracking ID found for conversion - User: {$user_id}");
             return;
         }
         
@@ -365,8 +221,12 @@ class FreedomologyInvitationTrackingSystem
             }
             setcookie('invitation_tracking_id', '', time() - 3600, '/'); // Clear cookie
             
+            error_log("Freedomology: Conversion tracked - Tracking ID: {$tracking_id}, User: {$user_id}");
+            
             // Hook for additional actions on conversion
             do_action('freedomology_invitation_converted', $user_id, $tracking_id);
+        } else {
+            error_log("Freedomology: Failed to update conversion - Tracking ID: {$tracking_id}");
         }
     }
 
@@ -391,6 +251,7 @@ class FreedomologyInvitationTrackingSystem
         }
         
         if (empty($tracking_id) || empty($user_id)) {
+            error_log("Freedomology: No tracking data for existing user conversion - Tracking ID: {$tracking_id}, User: {$user_id}");
             return;
         }
         
@@ -417,18 +278,26 @@ class FreedomologyInvitationTrackingSystem
             }
             setcookie('invitation_tracking_id', '', time() - 3600, '/'); // Clear cookie
             
+            error_log("Freedomology: Existing user conversion tracked - Tracking ID: {$tracking_id}, User: {$user_id}");
+            
             // Hook for additional actions on conversion
             do_action('freedomology_invitation_converted', $user_id, $tracking_id);
         }
     }
 
     /**
-     * Add tracking parameters to invitation URLs (disabled for clean URLs)
+     * Add tracking parameters to invitation URLs
      */
     public function add_tracking_parameters($url, $group_id)
     {
-        // No UTM parameters - return URL unchanged to avoid 404 errors
-        // Analytics are captured via database-only tracking
+        // Add UTM parameters for better tracking
+        $url = add_query_arg(array(
+            'utm_source' => 'group_invitation',
+            'utm_medium' => 'link_share',
+            'utm_campaign' => 'group_' . $group_id,
+            'utm_content' => 'manual_copy'
+        ), $url);
+        
         return $url;
     }
 
@@ -456,7 +325,7 @@ class FreedomologyInvitationTrackingSystem
     }
 
     /**
-     * Get invitation statistics for a group
+     * Get invitation statistics for a group (with duplicate filtering)
      */
     public function get_group_invitation_stats($group_id, $days = 30)
     {
@@ -465,24 +334,28 @@ class FreedomologyInvitationTrackingSystem
         
         $since_date = date('Y-m-d H:i:s', strtotime("-{$days} days"));
         
-        // Get total clicks
+        // Get total clicks (with duplicate filtering by IP and day)
         $total_clicks = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table_name WHERE group_id = %d AND click_timestamp >= %s",
+            "SELECT COUNT(DISTINCT CONCAT(ip_address, '-', DATE(click_timestamp))) 
+            FROM $table_name 
+            WHERE group_id = %d AND click_timestamp >= %s",
             $group_id, $since_date
         ));
         
-        // Get total conversions
+        // Get total conversions (unique conversions only)
         $total_conversions = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table_name WHERE group_id = %d AND converted = 1 AND click_timestamp >= %s",
+            "SELECT COUNT(DISTINCT user_id) 
+            FROM $table_name 
+            WHERE group_id = %d AND converted = 1 AND click_timestamp >= %s",
             $group_id, $since_date
         ));
         
-        // Get daily stats
+        // Get daily stats (with duplicate filtering)
         $daily_stats = $wpdb->get_results($wpdb->prepare(
             "SELECT 
                 DATE(click_timestamp) as date,
-                COUNT(*) as clicks,
-                SUM(converted) as conversions
+                COUNT(DISTINCT CONCAT(ip_address, '-', DATE(click_timestamp))) as clicks,
+                COUNT(DISTINCT CASE WHEN converted = 1 THEN user_id END) as conversions
             FROM $table_name 
             WHERE group_id = %d AND click_timestamp >= %s
             GROUP BY DATE(click_timestamp)
@@ -702,7 +575,7 @@ class FreedomologyInvitationTrackingSystem
     }
 
     /**
-     * Get statistics for all groups combined
+     * Get statistics for all groups combined (with duplicate filtering)
      */
     private function get_all_groups_stats($days = 30)
     {
@@ -711,24 +584,28 @@ class FreedomologyInvitationTrackingSystem
         
         $since_date = date('Y-m-d H:i:s', strtotime("-{$days} days"));
         
-        // Get total clicks
+        // Get total clicks (with duplicate filtering by IP and day)
         $total_clicks = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table_name WHERE click_timestamp >= %s",
+            "SELECT COUNT(DISTINCT CONCAT(ip_address, '-', DATE(click_timestamp))) 
+            FROM $table_name 
+            WHERE click_timestamp >= %s",
             $since_date
         ));
         
-        // Get total conversions
+        // Get total conversions (unique conversions only)
         $total_conversions = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table_name WHERE converted = 1 AND click_timestamp >= %s",
+            "SELECT COUNT(DISTINCT user_id) 
+            FROM $table_name 
+            WHERE converted = 1 AND click_timestamp >= %s",
             $since_date
         ));
         
-        // Get daily stats
+        // Get daily stats (with duplicate filtering)
         $daily_stats = $wpdb->get_results($wpdb->prepare(
             "SELECT 
                 DATE(click_timestamp) as date,
-                COUNT(*) as clicks,
-                SUM(converted) as conversions
+                COUNT(DISTINCT CONCAT(ip_address, '-', DATE(click_timestamp))) as clicks,
+                COUNT(DISTINCT CASE WHEN converted = 1 THEN user_id END) as conversions
             FROM $table_name 
             WHERE click_timestamp >= %s
             GROUP BY DATE(click_timestamp)
