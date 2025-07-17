@@ -1,10 +1,68 @@
-<?php
+/**
+     * Track invitation link clicks (backup method)
+     */
+    public function track_invitation_click()
+    {
+        // Backup method - AJAX is now primary
+        // This runs as fallback if JavaScript is disabled
+        
+        if (!is_page('sign-up')) {
+            return;
+        }
+        
+        $group_id = isset($_GET['group_id']) ? intval($_GET['group_id']) : 0;
+        $course_id = isset($_GET['course_id']) ? intval($_GET['course_id']) : 0;
+        $code = isset($_GET['code']) ? sanitize_text_field($_GET['code']) : '';
+        
+        if (empty($group_id) || empty($code)) {
+            return;
+        }
+        
+        // Use same logic as AJAX handler but simplified
+        $user_ip = $this->get_user_ip();
+        
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'freedomology_invitation_tracking';
+        
+        // Check for existing click today
+        $existing_click = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM $table_name 
+            WHERE group_id = %d 
+            AND invitation_code = %s 
+            AND ip_address = %s 
+            AND DATE(click_timestamp) = CURDATE()
+            LIMIT 1",
+            $group_id, $code, $user_ip
+        ));
+        
+        if ($existing_click) {
+            return; // Already tracked
+        }
+        
+        // Insert tracking record (simplified version)
+        $wpdb->insert(
+            $table_name,
+            array(
+                'group_id' => $group_id,
+                'course_id' => $course_id,
+                'invitation_code' => $code,
+                'ip_address' => $user_ip,
+                'user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '',
+                'referrer' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '',
+                'utm_source' => 'group_invitation',
+                'utm_medium' => 'link_share',
+                'utm_campaign' => 'group_' . $group_id,
+            ),
+            array('%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
+        );
+    }<?php
 /**
  * Group Invitation Link Tracking System
  * 
  * This file should be placed in: plugins/freedomology-core/elements/invitation-tracking-system.php
  * 
  * Tracks impressions (clicks) and conversions (successful signups) for group invitation links
+ * Uses database-only tracking to avoid UTM parameter 404 errors
  */
 
 if (!defined('ABSPATH')) {
@@ -27,7 +85,14 @@ class FreedomologyInvitationTrackingSystem
      */
     private function init_hooks()
     {
-        // Track clicks when sign-up page is visited with invitation parameters
+        // AJAX click tracking (new method - more reliable)
+        add_action('wp_ajax_track_invitation_click', array($this, 'ajax_track_invitation_click'));
+        add_action('wp_ajax_nopriv_track_invitation_click', array($this, 'ajax_track_invitation_click'));
+        
+        // Enqueue tracking script on sign-up page
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_tracking_script'));
+        
+        // Keep original method as backup
         add_action('template_redirect', array($this, 'track_invitation_click'), 1);
         
         // Track conversions when user successfully signs up
@@ -36,10 +101,10 @@ class FreedomologyInvitationTrackingSystem
         // Track conversions for existing users joining sprints (Form 4)
         add_action('gform_after_submission_4', array($this, 'track_existing_user_conversion'), 20, 2);
         
-        // Add tracking parameters to invitation URLs
+        // Add tracking parameters to invitation URLs (now disabled for clean URLs)
         add_filter('freedomology_invitation_url', array($this, 'add_tracking_parameters'), 10, 2);
         
-        // Admin interface for viewing statistics - MOVED TO SETTINGS MENU
+        // Admin interface for viewing statistics - Settings Menu
         add_action('admin_menu', array($this, 'add_admin_menu'));
         
         // AJAX handlers for admin statistics
@@ -97,41 +162,106 @@ class FreedomologyInvitationTrackingSystem
     }
 
     /**
-     * Track invitation link clicks
+     * Enqueue tracking script on sign-up page
      */
-    public function track_invitation_click()
+    public function enqueue_tracking_script()
     {
-        // Only track on sign-up page with invitation parameters
-        if (!is_page('sign-up')) {
+        // Only load on sign-up page with invitation parameters
+        if (!is_page('sign-up') || empty($_GET['group_id']) || empty($_GET['code'])) {
             return;
         }
         
-        $group_id = isset($_GET['group_id']) ? intval($_GET['group_id']) : 0;
-        $course_id = isset($_GET['course_id']) ? intval($_GET['course_id']) : 0;
-        $code = isset($_GET['code']) ? sanitize_text_field($_GET['code']) : '';
+        wp_enqueue_script('jquery');
+        
+        // Localize script with tracking data
+        wp_localize_script('jquery', 'invitationTracking', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('track_invitation_click'),
+            'group_id' => intval($_GET['group_id']),
+            'course_id' => isset($_GET['course_id']) ? intval($_GET['course_id']) : 0,
+            'code' => sanitize_text_field($_GET['code'])
+        ));
+        
+        // Add inline script to track click immediately
+        wp_add_inline_script('jquery', '
+        jQuery(document).ready(function($) {
+            // Track invitation click via AJAX
+            $.post(invitationTracking.ajax_url, {
+                action: "track_invitation_click",
+                group_id: invitationTracking.group_id,
+                course_id: invitationTracking.course_id,
+                code: invitationTracking.code,
+                nonce: invitationTracking.nonce
+            }, function(response) {
+                if (response.success) {
+                    console.log("Invitation click tracked successfully:", response.data);
+                } else {
+                    console.log("Invitation tracking failed:", response.data);
+                }
+            }).fail(function() {
+                console.log("Invitation tracking AJAX failed");
+            });
+        });
+        ');
+    }
+
+    /**
+     * AJAX handler for tracking invitation clicks
+     */
+    public function ajax_track_invitation_click()
+    {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'track_invitation_click')) {
+            wp_send_json_error('Security check failed');
+            return;
+        }
+        
+        $group_id = isset($_POST['group_id']) ? intval($_POST['group_id']) : 0;
+        $course_id = isset($_POST['course_id']) ? intval($_POST['course_id']) : 0;
+        $code = isset($_POST['code']) ? sanitize_text_field($_POST['code']) : '';
         
         if (empty($group_id) || empty($code)) {
+            wp_send_json_error('Missing required parameters');
             return;
         }
         
-        // Check if we already tracked this click (prevent duplicate tracking in same session)
-        $tracking_key = 'invitation_tracked_' . $group_id . '_' . $code;
-        if (isset($_SESSION[$tracking_key])) {
-            return;
-        }
+        // Get user information
+        $user_ip = $this->get_user_ip();
+        $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
         
-        // Start session if not already started
-        if (!session_id()) {
-            session_start();
-        }
-        
+        // Check for duplicate clicks from same IP today
         global $wpdb;
         $table_name = $wpdb->prefix . 'freedomology_invitation_tracking';
         
-        // Get UTM parameters
-        $utm_source = isset($_GET['utm_source']) ? sanitize_text_field($_GET['utm_source']) : '';
-        $utm_medium = isset($_GET['utm_medium']) ? sanitize_text_field($_GET['utm_medium']) : '';
-        $utm_campaign = isset($_GET['utm_campaign']) ? sanitize_text_field($_GET['utm_campaign']) : '';
+        // Ensure table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name;
+        if (!$table_exists) {
+            $this->create_tracking_tables();
+        }
+        
+        $existing_click = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM $table_name 
+            WHERE group_id = %d 
+            AND invitation_code = %s 
+            AND ip_address = %s 
+            AND DATE(click_timestamp) = CURDATE()
+            LIMIT 1",
+            $group_id, $code, $user_ip
+        ));
+        
+        if ($existing_click) {
+            // Already tracked today from this IP for this group
+            wp_send_json_success(array(
+                'message' => 'Already tracked today',
+                'tracking_id' => $existing_click
+            ));
+            return;
+        }
+        
+        // Create synthetic UTM data for analytics
+        $utm_source = 'group_invitation';
+        $utm_medium = 'link_share';
+        $utm_campaign = 'group_' . $group_id;
         
         // Insert tracking record
         $result = $wpdb->insert(
@@ -140,8 +270,8 @@ class FreedomologyInvitationTrackingSystem
                 'group_id' => $group_id,
                 'course_id' => $course_id,
                 'invitation_code' => $code,
-                'ip_address' => $this->get_user_ip(),
-                'user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '',
+                'ip_address' => $user_ip,
+                'user_agent' => $user_agent,
                 'referrer' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '',
                 'utm_source' => $utm_source,
                 'utm_medium' => $utm_medium,
@@ -151,13 +281,27 @@ class FreedomologyInvitationTrackingSystem
         );
         
         if ($result) {
-            // Mark as tracked in session
-            $_SESSION[$tracking_key] = true;
+            $tracking_id = $wpdb->insert_id;
             
             // Store tracking ID for potential conversion tracking
-            $_SESSION['invitation_tracking_id'] = $wpdb->insert_id;
+            if (!session_id()) {
+                @session_start();
+            }
+            if (session_id()) {
+                $_SESSION['invitation_tracking_id'] = $tracking_id;
+            }
             
-            error_log("Freedomology Tracking: Recorded click for group {$group_id}, code {$code}");
+            // Also store in a cookie as backup
+            setcookie('invitation_tracking_id', $tracking_id, time() + 3600, '/');
+            
+            wp_send_json_success(array(
+                'message' => 'Click tracked successfully',
+                'tracking_id' => $tracking_id,
+                'group_id' => $group_id,
+                'ip' => $user_ip
+            ));
+        } else {
+            wp_send_json_error('Database insert failed: ' . $wpdb->last_error);
         }
     }
 
@@ -166,11 +310,19 @@ class FreedomologyInvitationTrackingSystem
      */
     public function track_invitation_conversion($user_id, $feed, $entry, $user_pass)
     {
+        // Try to get tracking ID from session first
+        $tracking_id = 0;
+        
         if (!session_id()) {
-            session_start();
+            @session_start();
         }
         
-        $tracking_id = isset($_SESSION['invitation_tracking_id']) ? intval($_SESSION['invitation_tracking_id']) : 0;
+        if (isset($_SESSION['invitation_tracking_id'])) {
+            $tracking_id = intval($_SESSION['invitation_tracking_id']);
+        } elseif (isset($_COOKIE['invitation_tracking_id'])) {
+            // Fallback to cookie (for incognito mode)
+            $tracking_id = intval($_COOKIE['invitation_tracking_id']);
+        }
         
         if (empty($tracking_id)) {
             return;
@@ -193,10 +345,13 @@ class FreedomologyInvitationTrackingSystem
         );
         
         if ($result) {
-            error_log("Freedomology Tracking: Recorded conversion for user {$user_id}, tracking ID {$tracking_id}");
+            // Clear session and cookie tracking
+            if (isset($_SESSION['invitation_tracking_id'])) {
+                unset($_SESSION['invitation_tracking_id']);
+            }
+            setcookie('invitation_tracking_id', '', time() - 3600, '/'); // Clear cookie
             
-            // Clear session tracking
-            unset($_SESSION['invitation_tracking_id']);
+            error_log("Freedomology Tracking: Recorded conversion for user {$user_id}, tracking ID {$tracking_id}");
             
             // Hook for additional actions on conversion
             do_action('freedomology_invitation_converted', $user_id, $tracking_id);
@@ -208,12 +363,20 @@ class FreedomologyInvitationTrackingSystem
      */
     public function track_existing_user_conversion($entry, $form)
     {
+        // Try to get tracking ID from session first
+        $tracking_id = 0;
+        $user_id = get_current_user_id();
+        
         if (!session_id()) {
-            session_start();
+            @session_start();
         }
         
-        $tracking_id = isset($_SESSION['invitation_tracking_id']) ? intval($_SESSION['invitation_tracking_id']) : 0;
-        $user_id = get_current_user_id();
+        if (isset($_SESSION['invitation_tracking_id'])) {
+            $tracking_id = intval($_SESSION['invitation_tracking_id']);
+        } elseif (isset($_COOKIE['invitation_tracking_id'])) {
+            // Fallback to cookie (for incognito mode)
+            $tracking_id = intval($_COOKIE['invitation_tracking_id']);
+        }
         
         if (empty($tracking_id) || empty($user_id)) {
             return;
@@ -236,10 +399,13 @@ class FreedomologyInvitationTrackingSystem
         );
         
         if ($result) {
-            error_log("Freedomology Tracking: Recorded existing user conversion for user {$user_id}, tracking ID {$tracking_id}");
+            // Clear session and cookie tracking
+            if (isset($_SESSION['invitation_tracking_id'])) {
+                unset($_SESSION['invitation_tracking_id']);
+            }
+            setcookie('invitation_tracking_id', '', time() - 3600, '/'); // Clear cookie
             
-            // Clear session tracking
-            unset($_SESSION['invitation_tracking_id']);
+            error_log("Freedomology Tracking: Recorded existing user conversion for user {$user_id}, tracking ID {$tracking_id}");
             
             // Hook for additional actions on conversion
             do_action('freedomology_invitation_converted', $user_id, $tracking_id);
@@ -247,15 +413,12 @@ class FreedomologyInvitationTrackingSystem
     }
 
     /**
-     * Add minimal tracking parameters to invitation URLs
+     * Add tracking parameters to invitation URLs (disabled for clean URLs)
      */
     public function add_tracking_parameters($url, $group_id)
     {
-        // Add only essential group campaign tracking
-        $url = add_query_arg(array(
-            'utm_campaign' => 'group_' . $group_id,  // Track which group is sharing
-        ), $url);
-        
+        // No UTM parameters - return URL unchanged to avoid 404 errors
+        // Analytics are captured via database-only tracking
         return $url;
     }
 
