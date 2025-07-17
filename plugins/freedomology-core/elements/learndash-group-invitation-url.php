@@ -1,6 +1,6 @@
 <?php
 /**
- * Enhanced LearnDash Group Invitation URL with Click Tracking
+ * Enhanced LearnDash Group Invitation URL (No AJAX Tracking)
  * 
  * This file should replace: plugins/freedomology-core/elements/learndash-group-invitation-url.php
  */
@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Main Plugin Class with Enhanced Tracking
+ * Main Plugin Class (No AJAX Tracking)
  */
 class LearnDash_Group_Invitation_URL {
 
@@ -55,7 +55,7 @@ class LearnDash_Group_Invitation_URL {
         // Register Elementor widget
         add_action('elementor/widgets/register', array($this, 'register_elementor_widget'));
         
-        // AJAX handler for copy tracking
+        // Manual copy tracking (simple logging)
         add_action('wp_ajax_track_invitation_copy', array($this, 'ajax_track_invitation_copy'));
         add_action('wp_ajax_nopriv_track_invitation_copy', array($this, 'ajax_track_invitation_copy'));
     }
@@ -82,7 +82,7 @@ class LearnDash_Group_Invitation_URL {
     }
 
     /**
-     * Render invitation URLs with dropdown selection for groups and click tracking.
+     * Render invitation URLs with dropdown selection for groups.
      * 
      * @return string HTML output with dropdown selection and copyable invitation link.
      */
@@ -136,7 +136,7 @@ class LearnDash_Group_Invitation_URL {
         // Generate unique ID for this instance
         $unique_id = 'ldgiu_invite_' . uniqid();
         
-        // Build HTML output with tracking features
+        // Build HTML output (no AJAX tracking)
         ob_start();
         ?>
         <div class="ldgiu-invitation-container" id="<?php echo esc_attr($unique_id); ?>">
@@ -243,11 +243,9 @@ class LearnDash_Group_Invitation_URL {
                 const groupInfo = groupData[groupId];
                 
                 if (groupInfo) {
-                    // Use the pre-computed first course ID
-                    let courseId = groupInfo.first_course || 0;
-                    
-                    // Fallback to first course in array if needed
-                    if (courseId === 0 && groupInfo.courses && groupInfo.courses.length > 0) {
+                    // Use the first course in array
+                    let courseId = 0;
+                    if (groupInfo.courses && groupInfo.courses.length > 0) {
                         courseId = groupInfo.courses[0];
                     }
                     
@@ -270,9 +268,9 @@ class LearnDash_Group_Invitation_URL {
                 updateStatsDisplay();
             }
             
-            // Function to track copy action
+            // Function to track copy action (simple logging)
             function trackCopyAction(groupId, url) {
-                // Send tracking data to server
+                // Send simple tracking data to server (optional)
                 fetch("<?php echo admin_url('admin-ajax.php'); ?>", {
                     method: "POST",
                     headers: {
@@ -287,12 +285,10 @@ class LearnDash_Group_Invitation_URL {
                 })
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success) {
-                        console.log("Copy action tracked successfully");
-                    }
+                    console.log("Copy action logged");
                 })
                 .catch(error => {
-                    console.error("Error tracking copy action:", error);
+                    console.log("Copy logging failed:", error);
                 });
                 
                 // Add to copy log
@@ -309,7 +305,7 @@ class LearnDash_Group_Invitation_URL {
                 }
             }
             
-            // Copy URL to clipboard with tracking
+            // Copy URL to clipboard
             copyButton.addEventListener("click", function() {
                 const groupId = groupSelect.value;
                 const url = urlInput.value;
@@ -342,7 +338,7 @@ class LearnDash_Group_Invitation_URL {
     }
 
     /**
-     * AJAX handler for tracking invitation copy actions
+     * Simple AJAX handler for tracking invitation copy actions (logging only)
      */
     public function ajax_track_invitation_copy() {
         if (!wp_verify_nonce($_POST['nonce'], 'track_invitation_copy')) {
@@ -358,7 +354,7 @@ class LearnDash_Group_Invitation_URL {
             return;
         }
         
-        // Log the copy action (you can expand this to save to database if needed)
+        // Simple logging to WordPress options (no database table)
         $copy_data = array(
             'group_id' => $group_id,
             'user_id' => $user_id,
@@ -368,7 +364,7 @@ class LearnDash_Group_Invitation_URL {
             'ip_address' => $this->get_user_ip(),
         );
         
-        // Save copy action to WordPress options (you might want to use a custom table for better performance)
+        // Save copy action to WordPress options
         $copy_log = get_option('freedomology_copy_log', array());
         $copy_log[] = $copy_data;
         
@@ -382,7 +378,7 @@ class LearnDash_Group_Invitation_URL {
         // Trigger action for other plugins to hook into
         do_action('freedomology_invitation_copied', $group_id, $user_id, $invitation_url);
         
-        wp_send_json_success(array('message' => 'Copy action tracked successfully'));
+        wp_send_json_success(array('message' => 'Copy action logged'));
     }
 
     /**
@@ -432,15 +428,19 @@ class LearnDash_Group_Invitation_URL {
         
         $since_date = date('Y-m-d H:i:s', strtotime("-{$days} days"));
         
-        // Get total clicks
+        // Get total clicks (with duplicate filtering)
         $total_clicks = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table_name WHERE group_id = %d AND click_timestamp >= %s",
+            "SELECT COUNT(DISTINCT CONCAT(ip_address, '-', DATE(click_timestamp))) 
+            FROM $table_name 
+            WHERE group_id = %d AND click_timestamp >= %s",
             $group_id, $since_date
         ));
         
-        // Get total conversions
+        // Get total conversions (unique conversions only)
         $total_conversions = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table_name WHERE group_id = %d AND converted = 1 AND click_timestamp >= %s",
+            "SELECT COUNT(DISTINCT user_id) 
+            FROM $table_name 
+            WHERE group_id = %d AND converted = 1 AND click_timestamp >= %s",
             $group_id, $since_date
         ));
         
@@ -456,115 +456,35 @@ class LearnDash_Group_Invitation_URL {
 
     /**
      * Get courses for a group
-     * 
-     * @param int $group_id The group ID
-     * @return array Array of course IDs
      */
     private function get_group_courses($group_id) {
         $course_ids = array();
-        $is_hierarchy_enabled = false;
         
-        // Direct method to get course IDs - try this first for efficiency
+        // Direct method to get course IDs
         if (function_exists('learndash_group_enrolled_courses')) {
             $direct_courses = learndash_group_enrolled_courses($group_id);
             if (!empty($direct_courses) && is_array($direct_courses)) {
-                return $direct_courses; // Return immediately if we got courses
+                return $direct_courses;
             }
         }
         
-        // Check for hierarchy settings
-        if (function_exists('learndash_is_groups_hierarchical_enabled') && 
-            learndash_is_groups_hierarchical_enabled() && 
-            'yes' === get_option('ld_hierarchy_settings_child_groups', 'no')) {
-            
-            if (function_exists('ulgm_filter_has_var') && ulgm_filter_has_var('show-children')) {
-                $is_hierarchy_enabled = true;
-                if (class_exists('LearndashFunctionOverrides')) {
-                    $group_courses = LearndashFunctionOverrides::learndash_group_enrolled_courses($group_id, true);
-                } else {
-                    $group_courses = learndash_group_enrolled_courses($group_id, true);
-                }
-                
-                // If we have courses from hierarchy, return them
-                if (!empty($group_courses) && is_array($group_courses)) {
-                    return $group_courses;
-                }
-            }
-        }
-
-        // Set up query arguments for database query
-        if ($is_hierarchy_enabled && !empty($group_courses)) {
-            $post_vars = array(
-                'post_type' => 'sfwd-courses',
-                'post__in' => $group_courses,
-                'orderby' => 'post_title',
-                'order' => 'ASC',
-                'posts_per_page' => 99999,
-                'nopaging' => true,
-            );
-        } else {
-            $post_vars = array(
-                'post_type' => 'sfwd-courses',
-                'meta_key' => 'learndash_group_enrolled_' . $group_id,
-                'orderby' => 'post_title',
-                'order' => 'ASC',
-                'posts_per_page' => 99999,
-                'nopaging' => true,
-            );
-        }
-
-        // Apply group course order settings
-        if (function_exists('learndash_get_group_courses_order')) {
-            $ld_group_courses_order = learndash_get_group_courses_order($group_id);
-            if (is_array($ld_group_courses_order)) {
-                $post_vars['orderby'] = !empty($ld_group_courses_order['orderby']) ? 
-                    $ld_group_courses_order['orderby'] : $post_vars['orderby'];
-                
-                $post_vars['order'] = !empty($ld_group_courses_order['order']) ? 
-                    $ld_group_courses_order['order'] : $post_vars['order'];
-            }
-        }
-
-        // Apply filter for customizations
-        if (function_exists('apply_filters')) {
-            $post_vars = apply_filters('ulgm_group_courses_list_get_posts_vars', $post_vars, $group_id);
-        }
+        // Fallback: manual query
+        global $wpdb;
+        $meta_key = 'learndash_group_enrolled_' . $group_id;
+        $sql = $wpdb->prepare(
+            "SELECT post_id FROM {$wpdb->postmeta} 
+            WHERE meta_key = %s 
+            AND post_id IN (
+                SELECT ID FROM {$wpdb->posts} 
+                WHERE post_type = 'sfwd-courses' AND post_status = 'publish'
+            )
+            LIMIT 1",
+            $meta_key
+        );
         
-        // Execute query and collect course IDs
-        $the_query = new \WP_Query($post_vars);
-        
-        if ($the_query->have_posts()) {
-            while ($the_query->have_posts()) {
-                $the_query->the_post();
-                $course_ids[] = get_the_ID();
-            }
-            wp_reset_postdata();
-        }
-        
-        // If no courses found, try direct database query as last resort
-        if (empty($course_ids)) {
-            global $wpdb;
-            
-            // Look for any courses with the group meta
-            $meta_key = 'learndash_group_enrolled_' . $group_id;
-            $sql = $wpdb->prepare(
-                "SELECT post_id FROM {$wpdb->postmeta} 
-                WHERE meta_key = %s 
-                AND post_id IN (
-                    SELECT ID FROM {$wpdb->posts} 
-                    WHERE post_type = 'sfwd-courses' AND post_status = 'publish'
-                )
-                LIMIT 1",
-                $meta_key
-            );
-            
-            $course_id = $wpdb->get_var($sql);
-            if (!empty($course_id)) {
-                $course_ids[] = $course_id;
-            }
-            
-            // Log the database lookup for debugging
-            error_log("LearnDash Group Invitation URL: Direct DB lookup for group {$group_id} found course ID: " . ($course_id ?: 'none found'));
+        $course_id = $wpdb->get_var($sql);
+        if (!empty($course_id)) {
+            $course_ids[] = $course_id;
         }
         
         return $course_ids;
@@ -588,5 +508,3 @@ class LearnDash_Group_Invitation_URL {
 
 // Initialize the plugin
 LearnDash_Group_Invitation_URL::get_instance();
-
-// Plugin is now ready to use
