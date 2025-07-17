@@ -247,15 +247,13 @@ class FreedomologyInvitationTrackingSystem
     }
 
     /**
-     * Add tracking parameters to invitation URLs
+     * Add minimal tracking parameters to invitation URLs
      */
     public function add_tracking_parameters($url, $group_id)
     {
-        // Add UTM parameters for better tracking
+        // Add only essential group campaign tracking
         $url = add_query_arg(array(
-            'utm_source' => 'group_invitation',
-            'utm_medium' => 'email',
-            'utm_campaign' => 'group_' . $group_id,
+            'utm_campaign' => 'group_' . $group_id,  // Track which group is sharing
         ), $url);
         
         return $url;
