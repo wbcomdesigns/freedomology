@@ -52,6 +52,8 @@ class Freedomology
 		include plugin_dir_path(__FILE__) . '/elements/lesson-unlock-system.php';
 		include plugin_dir_path(__FILE__) . '/elements/invitation-tracking-system.php';
 		
+		include plugin_dir_path(__FILE__) . '/elements/ulgm-cleanup-automated.php';
+		
 		// Add general functions
 		include plugin_dir_path(__FILE__) . '/includes/functions.php';
 	}
@@ -518,39 +520,104 @@ class Freedomology
 
 		return $result;
 	}
+	
 
 	/**
-	 * Cleanup user signup and assign to group
+	 * Clean Working Approach - Just Signup Logic + Simple Code Check
+	 * Removed tracking integration since you have a separate tracking class
+	 */
+
+	/**
+	 * Simple check - ensure group has at least one available code
+	 */
+	private function ensure_group_has_codes($group_id) 
+	{
+		global $wpdb;
+		$table = $wpdb->prefix . 'ulgm_group_codes';
+		
+		// Get the ULGM code group ID for this LearnDash group
+		$code_group_id = ulgm()->group_management->seat->get_code_group_id($group_id);
+		
+		if (!$code_group_id) {
+			error_log("Freedomology: No ULGM code group found for group {$group_id}");
+			return false;
+		}
+		
+		// Check if there are any available codes
+		$available = $wpdb->get_var($wpdb->prepare(
+			"SELECT COUNT(*) FROM $table 
+			WHERE group_id = %d 
+			AND code_status = 'available' 
+			AND student_id IS NULL", 
+			$code_group_id
+		));
+		
+		error_log("Freedomology: Group {$group_id} has {$available} available codes");
+		
+		// If no available codes, generate some
+		if ($available < 1) {
+			error_log("Freedomology: Generating codes for group {$group_id}");
+			
+			// Generate 20 codes using simple method
+			for ($i = 0; $i < 20; $i++) {
+				$code = wp_generate_password(10, false);
+				$wpdb->insert($table, array(
+					'group_id' => $code_group_id,
+					'code' => $code,
+					'code_status' => 'available',
+					'used_date' => current_time('mysql'),
+					'ld_group_id' => $group_id
+				));
+			}
+			
+			error_log("Freedomology: Generated 20 codes for group {$group_id}");
+			return true;
+		}
+		
+		return true;
+	}
+
+	/**
+	 * Clean signup method - No tracking integration
 	 */
 	public function wbcom_cleanup_user_signup($user_id, $feed, $entry, $user_pass)
 	{
+		error_log("Freedomology: Starting signup cleanup for user {$user_id}");
+		
 		$form = GFFormsModel::get_form_meta($entry['form_id']);
 		$meta = $feed['meta'];
-
 		if (! $user_pass) {
 			$user_pass = gf_user_registration()->get_meta_value('password', $meta, $form, $entry);
 		}
-
+		
 		$code     = isset($entry[8]) ? $entry[8] : '';
 		$group_id = isset($entry[6]) ? $entry[6] : 0;
-
+		
 		if (empty($code)) {
+			error_log("Freedomology: No code provided, exiting");
 			return;
 		}
-
+		
+		error_log("Freedomology: Processing signup - User: {$user_id}, Group: {$group_id}");
+		
+		// Simple code check - ensure group has available codes
+		$this->ensure_group_has_codes($group_id);
+		
 		$code = ulgm()->group_management->get_sign_up_code_from_group_id($group_id);
-
+		
 		// Update user meta with the used code
 		update_user_meta($user_id, '_ulgm_code_used', $code);
-
+		
 		// Assign user to group
 		$result = ulgm()->group_management->set_user_to_code($user_id, $code, SharedFunctions::$not_started_status, $group_id);
-
 		if ($result) {
 			SharedFunctions::set_user_to_group($user_id, $group_id);
+			error_log("Freedomology: Successfully enrolled user {$user_id} in group {$group_id}");
+		} else {
+			error_log("Freedomology: Failed to enroll user {$user_id} in group {$group_id}");
 		}
-
-		// NEW: Save group leader email (only if not already set)
+		
+		// Save group leader email (only if not already set)
 		$existing_leader_email = get_user_meta($user_id, 'sprintleader_email', true);
 		if (empty($existing_leader_email)) {
 			$group_leader_email = get_post_meta($group_id, '_group_leader_email', true);
@@ -559,10 +626,9 @@ class Freedomology
 				error_log("Freedomology: Set sprintleader_email = {$group_leader_email} for new user {$user_id}");
 			}
 		}
-
+		
 		// Save Sprint Start Date for GROUP MEMBER (new signup via invite)
 		$course_id = get_post_meta($group_id, '_sprint_course_id', true);
-
 		if (empty($course_id)) {
 			// Fallback: get course from group enrollment
 			$group_course_ids = learndash_group_enrolled_courses($group_id);
@@ -570,7 +636,7 @@ class Freedomology
 				$course_id = $group_course_ids[0];
 			}
 		}
-
+		
 		if (! empty($course_id)) {
 			$course_specific_meta_key = '';
 			switch ($course_id) {
@@ -584,12 +650,12 @@ class Freedomology
 					$course_specific_meta_key = 'sprinth40_start';
 					break;
 			}
-
+			
 			if (! empty($course_specific_meta_key)) {
 				// Get start date from group leader (not global option)
 				$group_leader_email = get_post_meta($group_id, '_group_leader_email', true);
 				$leader_start_date = '';
-
+				
 				if (!empty($group_leader_email)) {
 					$group_leader = get_user_by('email', $group_leader_email);
 					if ($group_leader) {
@@ -597,14 +663,14 @@ class Freedomology
 						error_log("Freedomology: Found group leader {$group_leader->ID} with start date: {$leader_start_date}");
 					}
 				}
-
+				
 				// Set user's start date to match their group leader's start date
 				if (! empty($leader_start_date)) {
 					$existing_date = get_user_meta($user_id, $course_specific_meta_key, true);
 					if (empty($existing_date)) {
 						update_user_meta($user_id, $course_specific_meta_key, sanitize_text_field($leader_start_date));
 						error_log("Freedomology: Set {$course_specific_meta_key} = {$leader_start_date} for new member {$user_id}");
-
+						
 						// Sync to WP Fusion immediately
 						if (function_exists('wp_fusion')) {
 							wp_fusion()->user->push_user_meta($user_id);
@@ -615,15 +681,17 @@ class Freedomology
 				}
 			}
 		}
-
-		// Get user data
+		
+		// Get user data and auto-login
 		$user = get_userdata($user_id);
-
 		if ($user) {
 			wp_set_auth_cookie($user_id, true);
 			wp_set_current_user($user_id);
 			do_action('wp_login', $user->user_login, $user);
+			error_log("Freedomology: Auto-logged in user {$user_id} ({$user->user_login})");
 		}
+		
+		error_log("Freedomology: Signup cleanup completed for user {$user_id}");
 	}
 
 	/**

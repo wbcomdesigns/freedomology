@@ -154,7 +154,7 @@ class LearnDash_Group_Invitation_URL {
             
             <!-- Stats Display -->
             <div class="ldgiu-stats-display" id="<?php echo esc_attr($unique_id); ?>_stats" style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin: 10px 0; font-size: 13px;">
-                <div style="display: flex; gap: 15px; justify-content: space-between;">
+                <div style="display: flex; justify-content: space-between;">
                     <span>📊 <strong>Clicks:</strong> <span id="stats-clicks">0</span></span>
                     <span>✅ <strong>Signups:</strong> <span id="stats-conversions">0</span></span>
                     <span>📈 <strong>Rate:</strong> <span id="stats-rate">0%</span></span>

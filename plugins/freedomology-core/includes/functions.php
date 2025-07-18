@@ -564,3 +564,172 @@ function freedomology_initialize_buddypress_integration() {
 add_action('init', 'freedomology_initialize_resume_course');
 add_action('init', 'freedomology_initialize_groups_admin_columns');
 add_action('init', 'freedomology_initialize_buddypress_integration');
+
+
+/**
+ * ========================================
+ * LEARNDASH AUTO-REDIRECT FUNCTIONS
+ * ========================================
+ */
+
+/**
+ * Auto-redirect enrolled users and admins to first lesson when accessing a course
+ * 
+ * @return void
+ */
+function freedomology_auto_redirect_to_first_lesson() {
+    // Only run on single course pages
+    if (!is_singular('sfwd-courses')) {
+        return;
+    }
+    
+    // Get the current course ID
+    $course_id = get_the_ID();
+    
+    // Check if user is logged in
+    if (!is_user_logged_in()) {
+        return;
+    }
+    
+    // Get current user
+    $user_id = get_current_user_id();
+    $user = wp_get_current_user();
+    $user_roles = (array) $user->roles;
+    
+    // Check if user is enrolled OR is admin
+    if (sfwd_lms_has_access($course_id, $user_id) || in_array('administrator', $user_roles)) {
+        
+        // Get course lessons
+        $lesson_list = learndash_get_course_lessons_list($course_id);
+        
+        // If there are lessons, redirect to the first one
+        if (!empty($lesson_list)) {
+            $first_lesson = reset($lesson_list);
+            
+            if (isset($first_lesson['post']->ID)) {
+                $first_lesson_id = $first_lesson['post']->ID;
+                $first_lesson_url = get_permalink($first_lesson_id);
+                
+                // Redirect to the first lesson
+                wp_redirect($first_lesson_url);
+                exit;
+            }
+        }
+    }
+}
+
+/**
+ * JavaScript fallback for course auto-redirect in case template_redirect doesn't work
+ * 
+ * @return void
+ */
+function freedomology_auto_redirect_js() {
+    if (!is_singular('sfwd-courses')) {
+        return;
+    }
+    
+    $course_id = get_the_ID();
+    $user_id = get_current_user_id();
+    $user = wp_get_current_user();
+    $user_roles = (array) $user->roles;
+    
+    if (is_user_logged_in() && (sfwd_lms_has_access($course_id, $user_id) || in_array('administrator', $user_roles))) {
+        $lesson_list = learndash_get_course_lessons_list($course_id);
+        
+        if (!empty($lesson_list)) {
+            $first_lesson = reset($lesson_list);
+            
+            if (isset($first_lesson['post']->ID)) {
+                $first_lesson_id = $first_lesson['post']->ID;
+                $first_lesson_url = get_permalink($first_lesson_id);
+                ?>
+                <script type="text/javascript">
+                    document.addEventListener('DOMContentLoaded', function() {
+                        window.location.href = '<?php echo esc_url($first_lesson_url); ?>';
+                    });
+                </script>
+                <?php
+            }
+        }
+    }
+}
+
+/**
+ * Initialize auto-redirect functionality
+ * 
+ * @return void
+ */
+function freedomology_initialize_auto_redirect() {
+    // Server-side redirect
+    add_action('template_redirect', 'freedomology_auto_redirect_to_first_lesson', 10);
+    
+    // JavaScript fallback
+    add_action('wp_footer', 'freedomology_auto_redirect_js', 100);
+}
+
+// Initialize auto-redirect functionality
+add_action('init', 'freedomology_initialize_auto_redirect');
+
+
+/**
+ * ========================================
+ * COURSE ARCHIVE ENROLLMENT FILTERING (IMPROVED)
+ * ========================================
+ */
+
+/**
+ * Filter course archive to show only accessible courses for users
+ * Includes both enrolled courses and group leader access
+ * 
+ * @param WP_Query $query The main query object
+ * @return void
+ */
+function freedomology_filter_course_archive_by_access($query) {
+    if (!is_admin() && $query->is_main_query() && is_post_type_archive('sfwd-courses')) {
+        if (is_user_logged_in()) {
+            $user_id = get_current_user_id();
+            
+            // Get enrolled courses
+            $enrolled_courses = learndash_user_get_enrolled_courses($user_id);
+            
+            // Get courses via Group Leader access
+            $group_courses = array();
+            if (learndash_is_group_leader_user($user_id)) {
+                $group_ids = learndash_get_administrators_group_ids($user_id);
+                if (!empty($group_ids)) {
+                    foreach ($group_ids as $group_id) {
+                        $group_courses = array_merge(
+                            $group_courses,
+                            learndash_group_enrolled_courses($group_id)
+                        );
+                    }
+                }
+            }
+            
+            // Merge and make unique
+            $accessible_courses = array_unique(array_merge($enrolled_courses, $group_courses));
+            
+            if (!empty($accessible_courses)) {
+                $query->set('post__in', $accessible_courses);
+            } else {
+                // No access to any courses
+                $query->set('post__in', array(0));
+            }
+        } else {
+            // Guest user - no access
+            $query->set('post__in', array(0));
+        }
+    }
+}
+
+/**
+ * Initialize improved course archive filtering
+ * 
+ * @return void
+ */
+function freedomology_initialize_improved_course_archive_filtering() {
+    add_action('pre_get_posts', 'freedomology_filter_course_archive_by_access');
+}
+
+// Initialize improved course archive filtering
+add_action('init', 'freedomology_initialize_improved_course_archive_filtering');
