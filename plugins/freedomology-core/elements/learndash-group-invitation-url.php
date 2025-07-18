@@ -1,8 +1,8 @@
 <?php
 /**
- * Enhanced LearnDash Group Invitation URL (No AJAX Tracking)
+ * Enhanced LearnDash Group Invitation URL (Clean AJAX Handler)
  * 
- * This file should replace: plugins/freedomology-core/elements/learndash-group-invitation-url.php
+ * Fixed version with proper AJAX handling and debug cleanup
  */
 
 if (!defined('ABSPATH')) {
@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Main Plugin Class (No AJAX Tracking)
+ * Main Plugin Class (Clean AJAX)
  */
 class LearnDash_Group_Invitation_URL {
 
@@ -55,9 +55,7 @@ class LearnDash_Group_Invitation_URL {
         // Register Elementor widget
         add_action('elementor/widgets/register', array($this, 'register_elementor_widget'));
         
-        // Manual copy tracking (simple logging)
-        add_action('wp_ajax_track_invitation_copy', array($this, 'ajax_track_invitation_copy'));
-        add_action('wp_ajax_nopriv_track_invitation_copy', array($this, 'ajax_track_invitation_copy'));
+        // No AJAX tracking needed - using URL parameters for server-side tracking
     }
 
     /**
@@ -136,7 +134,7 @@ class LearnDash_Group_Invitation_URL {
         // Generate unique ID for this instance
         $unique_id = 'ldgiu_invite_' . uniqid();
         
-        // Build HTML output (no AJAX tracking)
+        // Build HTML output with clean copy tracking
         ob_start();
         ?>
         <div class="ldgiu-invitation-container" id="<?php echo esc_attr($unique_id); ?>">
@@ -173,10 +171,7 @@ class LearnDash_Group_Invitation_URL {
                 </button>
             </div>
             
-            <!-- Copy History (Recent Copies) -->
-            <div class="ldgiu-copy-history" id="<?php echo esc_attr($unique_id); ?>_history" style="margin-top: 10px; font-size: 12px; color: #666;">
-                <div id="copy-log" style="max-height: 100px; overflow-y: auto;"></div>
-            </div>
+
         </div>
 
         <style>
@@ -220,10 +215,13 @@ class LearnDash_Group_Invitation_URL {
             const groupSelect = document.getElementById("<?php echo esc_attr($unique_id); ?>_group");
             const urlInput = document.getElementById("<?php echo esc_attr($unique_id); ?>_url");
             const copyButton = document.getElementById("<?php echo esc_attr($unique_id); ?>_copy");
-            const copyLog = document.getElementById("copy-log");
             
             // Group data from PHP
             const groupData = <?php echo json_encode($group_data); ?>;
+            
+            // Track copy attempts to prevent spam
+            let lastCopyTime = 0;
+            const copyThrottleMs = 2000; // 2 seconds between copies
             
             // Function to update stats display
             function updateStatsDisplay() {
@@ -268,55 +266,47 @@ class LearnDash_Group_Invitation_URL {
                 updateStatsDisplay();
             }
             
-            // Function to track copy action (simple logging)
-            function trackCopyAction(groupId, url) {
-                // Send simple tracking data to server (optional)
-                fetch("<?php echo admin_url('admin-ajax.php'); ?>", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/x-www-form-urlencoded",
-                    },
-                    body: new URLSearchParams({
-                        action: "track_invitation_copy",
-                        group_id: groupId,
-                        invitation_url: url,
-                        nonce: "<?php echo wp_create_nonce('track_invitation_copy'); ?>"
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log("Copy action logged");
-                })
-                .catch(error => {
-                    console.log("Copy logging failed:", error);
-                });
-                
-                // Add to copy log
-                const timestamp = new Date().toLocaleTimeString();
-                const groupName = groupData[groupId].name;
-                const logEntry = document.createElement('div');
-                logEntry.className = 'copy-success';
-                logEntry.innerHTML = `${timestamp}: Copied link for "${groupName}"`;
-                copyLog.insertBefore(logEntry, copyLog.firstChild);
-                
-                // Keep only last 3 entries
-                while (copyLog.children.length > 3) {
-                    copyLog.removeChild(copyLog.lastChild);
-                }
-            }
+
             
             // Copy URL to clipboard
             copyButton.addEventListener("click", function() {
+                const currentTime = Date.now();
+                
+                // Throttle copy attempts
+                if (currentTime - lastCopyTime < copyThrottleMs) {
+                    return; // Too soon, ignore
+                }
+                lastCopyTime = currentTime;
+                
                 const groupId = groupSelect.value;
                 const url = urlInput.value;
                 
-                urlInput.select();
-                document.execCommand("copy");
+                if (!url) {
+                    return; // No URL to copy
+                }
                 
-                // Track the copy action
-                trackCopyAction(groupId, url);
+                // Try to copy to clipboard
+                try {
+                    urlInput.select();
+                    urlInput.setSelectionRange(0, 99999); // For mobile
+                    
+                    // Try modern clipboard API first
+                    if (navigator.clipboard && window.isSecureContext) {
+                        navigator.clipboard.writeText(url).then(function() {
+                            // Success - no logging needed
+                        }).catch(function() {
+                            // Fallback to execCommand
+                            document.execCommand("copy");
+                        });
+                    } else {
+                        // Fallback to execCommand for older browsers
+                        document.execCommand("copy");
+                    }
+                } catch (error) {
+                    // Silent error handling
+                }
                 
-                // Visual feedback
+                // Visual feedback on button
                 const originalText = copyButton.querySelector(".elementor-button-text").textContent;
                 copyButton.querySelector(".elementor-button-text").textContent = "<?php echo esc_js(__('Copied!', 'ldgiu')); ?>";
                 
@@ -337,49 +327,8 @@ class LearnDash_Group_Invitation_URL {
         return ob_get_clean();
     }
 
-    /**
-     * Simple AJAX handler for tracking invitation copy actions (logging only)
-     */
-    public function ajax_track_invitation_copy() {
-        if (!wp_verify_nonce($_POST['nonce'], 'track_invitation_copy')) {
-            wp_die('Security check failed');
-        }
-        
-        $group_id = isset($_POST['group_id']) ? intval($_POST['group_id']) : 0;
-        $invitation_url = isset($_POST['invitation_url']) ? esc_url_raw($_POST['invitation_url']) : '';
-        $user_id = get_current_user_id();
-        
-        if (empty($group_id) || empty($invitation_url)) {
-            wp_send_json_error('Invalid data');
-            return;
-        }
-        
-        // Simple logging to WordPress options (no database table)
-        $copy_data = array(
-            'group_id' => $group_id,
-            'user_id' => $user_id,
-            'url' => $invitation_url,
-            'timestamp' => current_time('mysql'),
-            'action' => 'manual_copy',
-            'ip_address' => $this->get_user_ip(),
-        );
-        
-        // Save copy action to WordPress options
-        $copy_log = get_option('freedomology_copy_log', array());
-        $copy_log[] = $copy_data;
-        
-        // Keep only last 100 copy actions
-        if (count($copy_log) > 100) {
-            $copy_log = array_slice($copy_log, -100);
-        }
-        
-        update_option('freedomology_copy_log', $copy_log);
-        
-        // Trigger action for other plugins to hook into
-        do_action('freedomology_invitation_copied', $group_id, $user_id, $invitation_url);
-        
-        wp_send_json_success(array('message' => 'Copy action logged'));
-    }
+    // URL parameters handle all tracking when invitation links are clicked
+    // No AJAX needed for copy actions
 
     /**
      * Get user IP address
@@ -410,7 +359,9 @@ class LearnDash_Group_Invitation_URL {
         // Check if tracking system is available
         if (class_exists('FreedomologyInvitationTrackingSystem')) {
             $tracking_system = new FreedomologyInvitationTrackingSystem();
-            return $tracking_system->get_group_invitation_stats($group_id, $days);
+            if (method_exists($tracking_system, 'get_group_invitation_stats')) {
+                return $tracking_system->get_group_invitation_stats($group_id, $days);
+            }
         }
         
         // Fallback to basic stats if tracking system not available
